@@ -1,6 +1,17 @@
 @echo off
 echo.
-echo === Importing schema.sql to 'library' database ===
+echo ========================================
+echo    Resetting and Initializing Library DB
+echo ========================================
+echo.
+
+REM Drop the existing database if it exists
+echo Dropping existing 'library' database if it exists...
+mysql -u root -p -e "DROP DATABASE IF EXISTS library;"
+
+REM Create the new database
+echo Creating a new 'library' database...
+mysql -u root -p -e "CREATE DATABASE library;"
 
 :: Set variables
 :: Change the address with your own db installation address 
@@ -11,14 +22,16 @@ set DB_NAME=library
 :: Change the user accordingly
 set USER=root
 
-:: Check if the database exists; create it if it doesn't
-echo Checking if the '%DB_NAME%' database exists...
-%MYSQL_PATH% -u %USER% -p -e "CREATE DATABASE IF NOT EXISTS %DB_NAME%;"
-
 :: Import the schema
 echo Importing schema.sql to '%DB_NAME%'...
 %MYSQL_PATH% -u %USER% -p %DB_NAME% < %SQL_FILE%
 
+:: Import the trigger to prevent multiple admins
+echo Importing the trigger to ensure only one admin...
+mysql -u root -p library < "F:\Library\admin_trigger.sql"
+
 echo.
-echo === Done! If no errors appeared, your schema is loaded. ===
+echo ========================================
+echo Library database has been reset and initialized.
+echo ========================================
 pause
