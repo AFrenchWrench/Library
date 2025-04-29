@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS members (
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
-  joined_date DATE NOT NULL
+  joined_date DATE NOT NULL,
+  role ENUM('member', 'admin') NOT NULL DEFAULT 'member'
 );
 
 -- authors, publishers, categories
@@ -12,10 +13,12 @@ CREATE TABLE IF NOT EXISTS authors (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL
 );
+
 CREATE TABLE IF NOT EXISTS publishers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL
 );
+
 CREATE TABLE IF NOT EXISTS categories (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL
@@ -47,6 +50,7 @@ CREATE TABLE IF NOT EXISTS loans (
   FOREIGN KEY (member_id) REFERENCES members(id),
   FOREIGN KEY (book_id) REFERENCES books(id)
 );
+
 CREATE TABLE IF NOT EXISTS fines (
   id INT AUTO_INCREMENT PRIMARY KEY,
   member_id INT,
