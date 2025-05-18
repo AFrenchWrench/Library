@@ -1,4 +1,6 @@
-mysql-connector-python>=8.0
-PySimpleGUI>=4.0
-passlib[bcrypt]>=1.7
-python-dotenv>=1.0
+bcrypt==3.2.2
+cffi==1.17.1
+mysql-connector-python==9.3.0
+passlib==1.7.4
+pycparser==2.22
+python-dotenv==1.1.0
