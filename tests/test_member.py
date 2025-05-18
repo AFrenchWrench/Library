@@ -1,6 +1,9 @@
 from models.member import Member
-from models.db_exceptions import AdminAlreadyExistsError, UserNotFound
-from auth import hash_password
+from models.db_exceptions import (
+    AdminAlreadyExistsError,
+    UserNotFound,
+    ValidationFailedError,
+)
 
 
 def print_result(test_name, passed):
@@ -9,7 +12,7 @@ def print_result(test_name, passed):
 
 def test_delete_all():
     try:
-        Member.delete_all_members()
+        Member.delete_all()
         print_result("Delete all members", True)
     except Exception as e:
         print_result("Delete all members", False)
@@ -18,11 +21,11 @@ def test_delete_all():
 
 def test_create_admin():
     try:
-        Member.delete_all_members()
+        Member.delete_all()
         admin = Member(
             name="Admin One",
             email="admin@example.com",
-            password_hash=hash_password("hash123"),
+            password="Hash123@",
             role="admin",
         )
         admin.save()
@@ -37,7 +40,7 @@ def test_prevent_second_admin():
         second_admin = Member(
             name="Admin Two",
             email="admin2@example.com",
-            password_hash=hash_password("hash456"),
+            password="Abc1234#",
             role="admin",
         )
         second_admin.save()
@@ -54,7 +57,7 @@ def test_create_user():
         user = Member(
             name="John Doe",
             email="john@example.com",
-            password_hash=hash_password("abc123"),
+            password="Abc1234#",
             role="member",
         )
         user.save()
@@ -66,15 +69,19 @@ def test_create_user():
 
 def test_invalid_role():
     try:
-        Member(
+        bad_user = Member(
             name="Hacker",
             email="hack@example.com",
-            password_hash=hash_password("bad"),
+            password="Abc1234#",
             role="superadmin",
         )
+        bad_user.save()
         print_result("Invalid role rejected", False)
-    except ValueError:
+    except (ValidationFailedError, ValueError):
         print_result("Invalid role rejected", True)
+    except Exception as e:
+        print_result("Invalid role rejected", False)
+        print(e)
 
 
 def test_get_user_by_email():
@@ -92,6 +99,9 @@ def test_get_nonexistent_user():
         print_result("Handle non-existent user", False)
     except UserNotFound:
         print_result("Handle non-existent user", True)
+    except Exception as e:
+        print_result("Handle non-existent user", False)
+        print(e)
 
 
 def test_update_user():
@@ -109,6 +119,91 @@ def test_update_user():
         print(e)
 
 
+def test_weak_password_no_uppercase():
+    try:
+        weak_user = Member(
+            name="Lowercase Guy",
+            email="lower@example.com",
+            password="abc1234#",  # No uppercase
+            role="member",
+        )
+        weak_user.save()
+        print_result("Weak password (no uppercase) rejected", False)
+    except ValidationFailedError:
+        print_result("Weak password (no uppercase) rejected", True)
+    except Exception as e:
+        print_result("Weak password (no uppercase) rejected", False)
+        print(e)
+
+
+def test_weak_password_no_special_char():
+    try:
+        weak_user = Member(
+            name="NoSpecial",
+            email="nospecial@example.com",
+            password="Abc12345",  # No special char
+            role="member",
+        )
+        weak_user.save()
+        print_result("Weak password (no special char) rejected", False)
+    except ValidationFailedError:
+        print_result("Weak password (no special char) rejected", True)
+    except Exception as e:
+        print_result("Weak password (no special char) rejected", False)
+        print(e)
+
+
+def test_invalid_email_format():
+    try:
+        bad_email_user = Member(
+            name="Bad Email",
+            email="not-an-email",
+            password="Abc1234#",
+            role="member",
+        )
+        bad_email_user.save()
+        print_result("Invalid email format rejected", False)
+    except ValidationFailedError:
+        print_result("Invalid email format rejected", True)
+    except Exception as e:
+        print_result("Invalid email format rejected", False)
+        print(e)
+
+
+def test_short_name():
+    try:
+        short_name_user = Member(
+            name="A",
+            email="short@example.com",
+            password="Abc1234#",
+            role="member",
+        )
+        short_name_user.save()
+        print_result("Too short name rejected", False)
+    except ValidationFailedError:
+        print_result("Too short name rejected", True)
+    except Exception as e:
+        print_result("Too short name rejected", False)
+        print(e)
+
+
+def test_missing_fields():
+    try:
+        incomplete_user = Member(
+            name="NoEmailNoPass",
+            email="",
+            password="",
+            role="member",
+        )
+        incomplete_user.save()
+        print_result("Missing fields rejected", False)
+    except ValidationFailedError:
+        print_result("Missing fields rejected", True)
+    except Exception as e:
+        print_result("Missing fields rejected", False)
+        print(e)
+
+
 if __name__ == "__main__":
     print("Running tests...\n")
     test_delete_all()
@@ -119,3 +214,8 @@ if __name__ == "__main__":
     test_get_user_by_email()
     test_get_nonexistent_user()
     test_update_user()
+    test_weak_password_no_uppercase()
+    test_weak_password_no_special_char()
+    test_invalid_email_format()
+    test_short_name()
+    test_missing_fields()
