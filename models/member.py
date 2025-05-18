@@ -9,18 +9,18 @@ from models.db_exceptions import AdminAlreadyExistsError, UserNotFound
 class Member:
     def __init__(
         self,
-        id=None,
-        name=None,
-        email=None,
-        password_hash=None,
+        name: str,
+        email: str,
+        password_hash: str,
+        id: int | None = None,
         joined_date=None,
         role="member",
     ) -> None:
-        self.id: None | int = id
         self.name: str = name
         self.email: str = email
         self.password_hash: str = password_hash
-        self.joined_date: str = joined_date if joined_date else date.today()
+        self.id: int | None = id
+        self.joined_date: date = joined_date if joined_date else date.today()
         if role not in ("admin", "member"):
             raise ValueError(f"Invalid role: {role}")
         self.role: Literal["member"] | Literal["admin"] = role
