@@ -116,3 +116,36 @@ class AuthorValidator(GeneralValidator):
         if errors:
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
         return True
+
+
+class PublisherValidator(GeneralValidator):
+
+    def validate_name(self, name):
+        self.validate_to_be_in_english(name)
+
+        if len(name) < 3:
+            raise ValueError("Name is too short")
+        elif len(name) > 20:
+            raise ValueError("Name is too long")
+        return True
+
+    def validate(self, book):
+        errors = {}
+
+        attrs = ["name"]
+
+        for attr in attrs:
+            validator_name = f"validate_{attr}"
+            validator = getattr(self, validator_name, None)
+            if callable(validator):
+                value = getattr(book, attr)
+                try:
+                    if value is None or value == "":
+                        raise ValueError("Field can't be empty.")
+                    validator(value)
+                except ValueError as e:
+                    errors[attr] = str(e)
+
+        if errors:
+            raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
+        return True
