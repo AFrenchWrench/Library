@@ -20,3 +20,11 @@ class ValidationFailedError(Exception):
 
 class DuplicateNameError(Exception):
     pass
+
+
+class DuplicateISBNError(Exception):
+    pass
+
+
+class BookNotFound(Exception):
+    pass

@@ -9,7 +9,6 @@ class GeneralValidator:
     def validate_to_be_in_english(text: str) -> bool:
         if not isinstance(text, str) or not text.isascii():
             raise ValueError(f"Text '{text}' must be fully in English.")
-        return True
 
     @staticmethod
     def validate_to_be_whole_number(number):
@@ -19,7 +18,6 @@ class GeneralValidator:
             raise ValueError("Number must be whole (no decimals).")
         if number < 0:
             raise ValueError("Number must be a non negative int")
-        return True
 
     @staticmethod
     def validate_date(d: date):
@@ -30,7 +28,23 @@ class GeneralValidator:
             raise ValueError("Date cannot be in the past.")
         elif (d - today).days > 60:
             raise ValueError("Date can't be more than 60 days ahead.")
-        return True
+
+    @staticmethod
+    def validate_foreign_key_exists(table: str, id_value: int):
+        GeneralValidator.validate_to_be_whole_number(id_value)
+
+        query = f"SELECT 1 FROM {table} WHERE id = %s LIMIT 1"
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (id_value,))
+                    result = cur.fetchone()
+                    if not result:
+                        raise ValueError(
+                            f"No entry found in '{table}' with id={id_value}"
+                        )
+        except Exception as e:
+            raise ValueError(f"Error validating foreign key for '{table}': {e}")
 
 
 class MemberValidator(GeneralValidator):
@@ -83,10 +97,10 @@ class MemberValidator(GeneralValidator):
 
         if errors:
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
-        return True
 
 
 class AuthorValidator(GeneralValidator):
+
     def validate_name(self, name):
         self.validate_to_be_in_english(name)
 
@@ -94,9 +108,8 @@ class AuthorValidator(GeneralValidator):
             raise ValueError("Name is too short")
         elif len(name) > 20:
             raise ValueError("Name is too long")
-        return True
 
-    def validate(self, book):
+    def validate(self, author):
         errors = {}
 
         attrs = ["name"]
@@ -105,7 +118,7 @@ class AuthorValidator(GeneralValidator):
             validator_name = f"validate_{attr}"
             validator = getattr(self, validator_name, None)
             if callable(validator):
-                value = getattr(book, attr)
+                value = getattr(author, attr)
                 try:
                     if value is None or value == "":
                         raise ValueError("Field can't be empty.")
@@ -115,7 +128,6 @@ class AuthorValidator(GeneralValidator):
 
         if errors:
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
-        return True
 
 
 class PublisherValidator(GeneralValidator):
@@ -127,9 +139,8 @@ class PublisherValidator(GeneralValidator):
             raise ValueError("Name is too short")
         elif len(name) > 20:
             raise ValueError("Name is too long")
-        return True
 
-    def validate(self, book):
+    def validate(self, publisher):
         errors = {}
 
         attrs = ["name"]
@@ -138,7 +149,7 @@ class PublisherValidator(GeneralValidator):
             validator_name = f"validate_{attr}"
             validator = getattr(self, validator_name, None)
             if callable(validator):
-                value = getattr(book, attr)
+                value = getattr(publisher, attr)
                 try:
                     if value is None or value == "":
                         raise ValueError("Field can't be empty.")
@@ -148,7 +159,6 @@ class PublisherValidator(GeneralValidator):
 
         if errors:
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
-        return True
 
 
 class CategoryValidator(GeneralValidator):
@@ -160,9 +170,8 @@ class CategoryValidator(GeneralValidator):
             raise ValueError("Name is too short")
         elif len(name) > 20:
             raise ValueError("Name is too long")
-        return True
 
-    def validate(self, book):
+    def validate(self, category):
         errors = {}
 
         attrs = ["name"]
@@ -171,7 +180,7 @@ class CategoryValidator(GeneralValidator):
             validator_name = f"validate_{attr}"
             validator = getattr(self, validator_name, None)
             if callable(validator):
-                value = getattr(book, attr)
+                value = getattr(category, attr)
                 try:
                     if value is None or value == "":
                         raise ValueError("Field can't be empty.")
@@ -181,4 +190,70 @@ class CategoryValidator(GeneralValidator):
 
         if errors:
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
-        return True
+
+
+class BookValidator(GeneralValidator):
+
+    def validate_isbn(self, isbn):
+        self.validate_to_be_in_english(isbn)
+        if len(isbn) < 8:
+            raise ValueError("ISBN is too short.")
+        if len(isbn) > 20:
+            raise ValueError("ISBN is too long.")
+
+    def validate_title(self, title):
+        self.validate_to_be_in_english(title)
+        if len(title) < 2:
+            raise ValueError("Title is too short.")
+        if len(title) > 255:
+            raise ValueError("Title is too long.")
+
+    def validate_author_id(self, author_id):
+        self.validate_foreign_key_exists("authors", author_id)
+
+    def validate_publisher_id(self, publisher_id):
+        self.validate_foreign_key_exists("publishers", publisher_id)
+
+    def validate_category_id(self, category_id):
+        self.validate_foreign_key_exists("categories", category_id)
+
+    def validate_total_copies(self, total_copies):
+        self.validate_to_be_whole_number(total_copies)
+
+    def validate_available_copies(self, available_copies, total_copies):
+        self.validate_to_be_whole_number(available_copies)
+
+        if available_copies > total_copies:
+            raise ValueError("Available copies cannot be more than total copies.")
+
+    def validate(self, book):
+        errors = {}
+
+        attrs = [
+            "isbn",
+            "title",
+            "author_id",
+            "publisher_id",
+            "category_id",
+            "total_copies",
+            "available_copies",
+        ]
+
+        for attr in attrs:
+            validator_name = f"validate_{attr}"
+            validator = getattr(self, validator_name, None)
+            if callable(validator):
+                value = getattr(book, attr)
+                try:
+                    if value is None or value == "":
+                        raise ValueError("Field can't be empty.")
+                    (
+                        validator(value)
+                        if attr != "available_copies"
+                        else validator(value, getattr(book, "total_copies"))
+                    )
+                except ValueError as e:
+                    errors[attr] = str(e)
+
+        if errors:
+            raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))

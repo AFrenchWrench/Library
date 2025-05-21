@@ -205,7 +205,7 @@ def test_missing_fields():
 
 
 if __name__ == "__main__":
-    print("Running tests...\n")
+    print("\nRunning tests...\n")
     test_delete_all()
     test_create_admin()
     test_prevent_second_admin()

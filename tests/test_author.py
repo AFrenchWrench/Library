@@ -51,7 +51,7 @@ def test_long_name():
 
 
 if __name__ == "__main__":
-    print("Running Author tests...\n")
+    print("\nRunning Author tests...\n")
     test_delete_all()
     test_create_author()
     test_short_name()

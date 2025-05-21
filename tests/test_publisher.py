@@ -39,7 +39,7 @@ def test_invalid_name():
 
 
 if __name__ == "__main__":
-    print("Running Publisher tests...\n")
+    print("\nRunning Publisher tests...\n")
     test_delete_all()
     test_create_publisher()
     test_invalid_name()

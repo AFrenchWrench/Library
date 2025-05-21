@@ -39,7 +39,7 @@ def test_empty_name():
 
 
 if __name__ == "__main__":
-    print("Running Category tests...\n")
+    print("\nRunning Category tests...\n")
     test_delete_all()
     test_create_category()
     test_empty_name()
