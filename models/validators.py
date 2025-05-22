@@ -293,3 +293,34 @@ class LoanValidator(BaseValidator):
         if errors:
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
 
+
+class FineValidator(BaseValidator):
+
+    def validate_member_id(self, member_id):
+        self.validate_foreign_key_exists("members", member_id)
+
+    def validate_loan_id(self, loan_id):
+        self.validate_foreign_key_exists("loans", loan_id)
+
+    def validate_amount(self, amount):
+        self.validate_to_be_whole_number(amount)
+
+    def validate_paid(self, paid):
+        if not isinstance(paid, bool):
+            raise ValueError("Paid must be a boolean value.")
+
+    def validate(self, fine):
+        errors = {}
+        fields = ["member_id", "loan_id", "amount", "paid"]
+
+        for field in fields:
+            validator = getattr(self, f"validate_{field}", None)
+            if callable(validator):
+                value = getattr(fine, field)
+                try:
+                    validator(value)
+                except ValueError as e:
+                    errors[field] = str(e)
+
+        if errors:
+            raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
