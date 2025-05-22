@@ -109,6 +109,22 @@ class Book:
         return cls(**row)
 
     @classmethod
+    def delete_by_isbn(cls, isbn: str) -> None:
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM books WHERE isbn = %s", (isbn,))
+                    if cur.rowcount == 0:
+                        raise BookNotFound(f"No book found with ISBN: {isbn}")
+                    conn.commit()
+        except BookNotFound:
+            raise
+        except Exception as e:
+            raise DatabaseOperationError(
+                f"Failed to delete book with ISBN: {isbn}"
+            ) from e
+
+    @classmethod
     def delete_all(cls) -> None:
         try:
             with get_connection() as conn:

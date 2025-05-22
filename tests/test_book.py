@@ -252,6 +252,30 @@ def test_negative_copies():
         print(e)
 
 
+def test_delete_by_isbn():
+    try:
+        book = Book(
+            isbn="9999999999",
+            title="Temp Book for Deletion",
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
+        )
+        book.save()
+
+        Book.delete_by_isbn("9999999999")
+
+        try:
+            Book.get_by_isbn("9999999999")
+            print_result("Delete book by ISBN", False)
+        except BookNotFound:
+            print_result("Delete book by ISBN", True)
+
+    except Exception as e:
+        print_result("Delete book by ISBN", False)
+        print(e)
+
+
 if __name__ == "__main__":
     print("\nRunning Book tests...\n")
     seed_required_foreign_keys()
@@ -269,6 +293,7 @@ if __name__ == "__main__":
         test_update_book_title()
         test_total_less_than_available()
         test_negative_copies()
+        test_delete_by_isbn()
     finally:
         print("\nCleaning up seeded foreign keys...")
         delete_seeded_foreign_keys()
