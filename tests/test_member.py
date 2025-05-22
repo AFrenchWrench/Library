@@ -96,8 +96,11 @@ def test_get_user_by_email():
             role="member",
         )
         user.save()
-        Member.get_by_email("john@example.com")
-        print_result("Get user by email", True)
+        fetched = Member.get_by_email("john@example.com")
+        if fetched.name == "John Doe":
+            print_result("Get user by email", True)
+        else:
+            print_result("Get user by email", False)
     except Exception as e:
         print_result("Get user by email", False)
         print(e)
@@ -248,7 +251,6 @@ def test_delete_user_by_email():
 
 if __name__ == "__main__":
     print("\nRunning Member tests...\n")
-    test_delete_all()
     test_create_admin()
     test_prevent_second_admin()
     test_create_user()

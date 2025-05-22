@@ -185,8 +185,8 @@ def test_get_by_isbn():
             available_copies=5,
         )
         book.save()
-        book_from_db = Book.get_by_isbn("1234567890")
-        if book_from_db.title == "Python in Depth":
+        fetched = Book.get_by_isbn("1234567890")
+        if fetched.title == "Python in Depth":
             print_result("Get book by ISBN", True)
         else:
             print_result("Get book by ISBN", False)

@@ -137,7 +137,7 @@ class PublisherValidator(BaseValidator):
 
         if len(name) < 3:
             raise ValueError("Name is too short")
-        elif len(name) > 20:
+        elif len(name) > 50:
             raise ValueError("Name is too long")
 
     def validate(self, publisher):
