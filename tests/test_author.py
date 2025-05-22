@@ -1,5 +1,5 @@
 from models.author import Author
-from models.db_exceptions import ValidationFailedError, DatabaseOperationError
+from models.db_exceptions import ValidationFailedError
 
 
 def print_result(test_name, passed):

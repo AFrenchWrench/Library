@@ -3,7 +3,7 @@ from re import match
 from db import get_connection
 
 
-class GeneralValidator:
+class BaseValidator:
 
     @staticmethod
     def validate_to_be_in_english(text: str) -> bool:
@@ -31,7 +31,7 @@ class GeneralValidator:
 
     @staticmethod
     def validate_foreign_key_exists(table: str, id_value: int):
-        GeneralValidator.validate_to_be_whole_number(id_value)
+        BaseValidator.validate_to_be_whole_number(id_value)
 
         query = f"SELECT 1 FROM {table} WHERE id = %s LIMIT 1"
         try:
@@ -47,7 +47,7 @@ class GeneralValidator:
             raise ValueError(f"Error validating foreign key for '{table}': {e}")
 
 
-class MemberValidator(GeneralValidator):
+class MemberValidator(BaseValidator):
 
     def validate_name(self, name):
         self.validate_to_be_in_english(name)
@@ -99,7 +99,7 @@ class MemberValidator(GeneralValidator):
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
 
 
-class AuthorValidator(GeneralValidator):
+class AuthorValidator(BaseValidator):
 
     def validate_name(self, name):
         self.validate_to_be_in_english(name)
@@ -130,7 +130,7 @@ class AuthorValidator(GeneralValidator):
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
 
 
-class PublisherValidator(GeneralValidator):
+class PublisherValidator(BaseValidator):
 
     def validate_name(self, name):
         self.validate_to_be_in_english(name)
@@ -161,7 +161,7 @@ class PublisherValidator(GeneralValidator):
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
 
 
-class CategoryValidator(GeneralValidator):
+class CategoryValidator(BaseValidator):
 
     def validate_name(self, name):
         self.validate_to_be_in_english(name)
@@ -192,7 +192,7 @@ class CategoryValidator(GeneralValidator):
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
 
 
-class BookValidator(GeneralValidator):
+class BookValidator(BaseValidator):
 
     def validate_isbn(self, isbn):
         self.validate_to_be_in_english(isbn)
@@ -257,3 +257,39 @@ class BookValidator(GeneralValidator):
 
         if errors:
             raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
+
+
+class LoanValidator(BaseValidator):
+
+    def validate_member_id(self, member_id):
+        self.validate_foreign_key_exists("members", member_id)
+
+    def validate_book_id(self, book_id):
+        self.validate_foreign_key_exists("books", book_id)
+
+    def validate_loan_date(self, loan_date):
+        self.validate_date(loan_date)
+
+    def validate_due_date(self, due_date):
+        self.validate_date(due_date)
+
+    def validate_return_date(self, return_date):
+        if return_date is not None:
+            self.validate_date(return_date)
+
+    def validate(self, loan):
+        errors = {}
+        fields = ["member_id", "book_id", "loan_date", "due_date", "return_date"]
+
+        for field in fields:
+            validator = getattr(self, f"validate_{field}", None)
+            if callable(validator):
+                value = getattr(loan, field)
+                try:
+                    validator(value)
+                except ValueError as e:
+                    errors[field] = str(e)
+
+        if errors:
+            raise ValueError("\n".join(f"{k}: {v}" for k, v in errors.items()))
+

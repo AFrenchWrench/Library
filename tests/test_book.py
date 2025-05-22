@@ -2,10 +2,16 @@ from models.book import Book
 from models.db_exceptions import (
     ValidationFailedError,
     DuplicateISBNError,
-    DatabaseOperationError,
     BookNotFound,
 )
 from db import get_connection
+from models.author import Author
+from models.publisher import Publisher
+from models.category import Category
+
+seeded_author_id = None
+seeded_publisher_id = None
+seeded_category_id = None
 
 
 def print_result(test_name, passed):
@@ -13,18 +19,25 @@ def print_result(test_name, passed):
 
 
 def seed_required_foreign_keys():
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT IGNORE INTO authors (id, name) VALUES (1, 'Default Author')"
-            )
-            cur.execute(
-                "INSERT IGNORE INTO publishers (id, name) VALUES (1, 'Default Publisher')"
-            )
-            cur.execute(
-                "INSERT IGNORE INTO categories (id, name) VALUES (1, 'Default Category')"
-            )
-            conn.commit()
+    global seeded_author_id, seeded_publisher_id, seeded_category_id
+
+    Book.delete_all()
+
+    Author.delete_all()
+    Publisher.delete_all()
+    Category.delete_all()
+
+    author = Author(name="Default Author")
+    author.save()
+    seeded_author_id = author.id
+
+    publisher = Publisher(name="Default Publisher")
+    publisher.save()
+    seeded_publisher_id = publisher.id
+
+    category = Category(name="Default Category")
+    category.save()
+    seeded_category_id = category.id
 
 
 def delete_seeded_foreign_keys():
@@ -56,9 +69,9 @@ def test_create_valid_book():
         book = Book(
             isbn="1234567890",
             title="Python in Depth",
-            author_id=1,
-            publisher_id=1,
-            category_id=1,
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
             total_copies=5,
             available_copies=5,
         )
@@ -74,9 +87,9 @@ def test_duplicate_isbn():
         duplicate = Book(
             isbn="1234567890",
             title="Duplicate Book",
-            author_id=1,
-            publisher_id=1,
-            category_id=1,
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
             total_copies=2,
             available_copies=2,
         )
@@ -94,9 +107,9 @@ def test_short_isbn():
         book = Book(
             isbn="123",
             title="Short ISBN",
-            author_id=1,
-            publisher_id=1,
-            category_id=1,
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
         )
         book.save()
         print_result("Reject short ISBN", False)
@@ -112,9 +125,9 @@ def test_long_isbn():
         book = Book(
             isbn="X" * 25,
             title="Long ISBN",
-            author_id=1,
-            publisher_id=1,
-            category_id=1,
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
         )
         book.save()
         print_result("Reject long ISBN", False)
@@ -129,10 +142,10 @@ def test_invalid_title():
     try:
         book = Book(
             isbn="1234567899",
-            title="پایتون",  # Non-English
-            author_id=1,
-            publisher_id=1,
-            category_id=1,
+            title="پایتون",
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
         )
         book.save()
         print_result("Reject non-English title", False)
@@ -204,9 +217,9 @@ def test_total_less_than_available():
         book = Book(
             isbn="9876543210",
             title="Logical Test",
-            author_id=1,
-            publisher_id=1,
-            category_id=1,
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
             total_copies=2,
             available_copies=5,
         )
@@ -224,9 +237,9 @@ def test_negative_copies():
         book = Book(
             isbn="1112223334",
             title="Negative Copies",
-            author_id=1,
-            publisher_id=1,
-            category_id=1,
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
             total_copies=-1,
             available_copies=-2,
         )
@@ -238,8 +251,6 @@ def test_negative_copies():
         print_result("Reject negative copy counts", False)
         print(e)
 
-
-# ------------- Entry Point -------------
 
 if __name__ == "__main__":
     print("\nRunning Book tests...\n")

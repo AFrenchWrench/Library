@@ -124,7 +124,7 @@ def test_weak_password_no_uppercase():
         weak_user = Member(
             name="Lowercase Guy",
             email="lower@example.com",
-            password="abc1234#",  # No uppercase
+            password="abc1234#",
             role="member",
         )
         weak_user.save()
@@ -141,7 +141,7 @@ def test_weak_password_no_special_char():
         weak_user = Member(
             name="NoSpecial",
             email="nospecial@example.com",
-            password="Abc12345",  # No special char
+            password="Abc12345",
             role="member",
         )
         weak_user.save()

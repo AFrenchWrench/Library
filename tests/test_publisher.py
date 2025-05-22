@@ -28,7 +28,7 @@ def test_create_publisher():
 
 def test_invalid_name():
     try:
-        publisher = Publisher(name="پنگوئن")  # Not ASCII
+        publisher = Publisher(name="پنگوئن")
         publisher.save()
         print_result("Reject non-English name", False)
     except ValidationFailedError:

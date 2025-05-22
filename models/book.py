@@ -1,5 +1,4 @@
 from __future__ import annotations
-from datetime import date
 from mysql.connector import Error
 from db import get_connection
 from models.validators import BookValidator
