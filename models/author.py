@@ -2,10 +2,10 @@ from __future__ import annotations
 from mysql.connector import Error
 from db import get_connection
 from models.validators import AuthorValidator
-from models.db_exceptions import (
+from models.exceptions import (
     DatabaseOperationError,
     DuplicateNameError,
-    UserNotFound,
+    AuthorNotFound,
     ValidationFailedError,
 )
 
@@ -61,7 +61,7 @@ class Author:
                 cur.execute("SELECT * FROM authors WHERE id=%s", (id,))
                 row = cur.fetchone()
         if not row:
-            raise UserNotFound(f"No author found with ID {id}")
+            raise AuthorNotFound(f"No author found with ID {id}")
         return cls(**row)
 
     @classmethod

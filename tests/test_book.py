@@ -1,5 +1,5 @@
 from models.book import Book
-from models.db_exceptions import (
+from models.exceptions import (
     ValidationFailedError,
     DuplicateISBNError,
     BookNotFound,
@@ -21,12 +21,6 @@ def print_result(test_name, passed):
 def seed_required_foreign_keys():
     global seeded_author_id, seeded_publisher_id, seeded_category_id
 
-    Book.delete_all()
-
-    Author.delete_all()
-    Publisher.delete_all()
-    Category.delete_all()
-
     author = Author(name="Default Author")
     author.save()
     seeded_author_id = author.id
@@ -41,31 +35,22 @@ def seed_required_foreign_keys():
 
 
 def delete_seeded_foreign_keys():
-    Book.delete_all()
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM authors WHERE id = 1 AND name = 'Default Author'")
             cur.execute(
-                "DELETE FROM publishers WHERE id = 1 AND name = 'Default Publisher'"
+                f"DELETE FROM authors WHERE id = {seeded_author_id} AND name = 'Default Author'"
             )
             cur.execute(
-                "DELETE FROM categories WHERE id = 1 AND name = 'Default Category'"
+                f"DELETE FROM publishers WHERE id = {seeded_publisher_id} AND name = 'Default Publisher'"
+            )
+            cur.execute(
+                f"DELETE FROM categories WHERE id = {seeded_category_id} AND name = 'Default Category'"
             )
             conn.commit()
 
 
-def test_delete_all():
-    try:
-        Book.delete_all()
-        print_result("Delete all books", True)
-    except Exception as e:
-        print_result("Delete all books", False)
-        print(e)
-
-
 def test_create_valid_book():
     try:
-        Book.delete_all()
         book = Book(
             isbn="1234567890",
             title="Python in Depth",
@@ -80,10 +65,22 @@ def test_create_valid_book():
     except Exception as e:
         print_result("Create valid book", False)
         print(e)
+    finally:
+        Book.delete_by_isbn(book.isbn)
 
 
 def test_duplicate_isbn():
     try:
+        book = Book(
+            isbn="1234567890",
+            title="Python in Depth",
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
+            total_copies=5,
+            available_copies=5,
+        )
+        book.save()
         duplicate = Book(
             isbn="1234567890",
             title="Duplicate Book",
@@ -100,6 +97,8 @@ def test_duplicate_isbn():
     except Exception as e:
         print_result("Reject duplicate ISBN", False)
         print(e)
+    finally:
+        Book.delete_by_isbn(book.isbn)
 
 
 def test_short_isbn():
@@ -176,14 +175,26 @@ def test_empty_fields():
 
 def test_get_by_isbn():
     try:
-        book = Book.get_by_isbn("1234567890")
-        if book.title == "Python in Depth":
+        book = Book(
+            isbn="1234567890",
+            title="Python in Depth",
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
+            total_copies=5,
+            available_copies=5,
+        )
+        book.save()
+        book_from_db = Book.get_by_isbn("1234567890")
+        if book_from_db.title == "Python in Depth":
             print_result("Get book by ISBN", True)
         else:
             print_result("Get book by ISBN", False)
     except Exception as e:
         print_result("Get book by ISBN", False)
         print(e)
+    finally:
+        Book.delete_by_isbn(book.isbn)
 
 
 def test_get_nonexistent_book():
@@ -199,7 +210,16 @@ def test_get_nonexistent_book():
 
 def test_update_book_title():
     try:
-        book = Book.get_by_isbn("1234567890")
+        book = Book(
+            isbn="1234567890",
+            title="Python in Depth",
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
+            total_copies=5,
+            available_copies=5,
+        )
+        book.save()
         book.title = "Updated Python Book"
         book.save()
         updated = Book.get_by_isbn("1234567890")
@@ -210,6 +230,8 @@ def test_update_book_title():
     except Exception as e:
         print_result("Update book title", False)
         print(e)
+    finally:
+        Book.delete_by_isbn(book.isbn)
 
 
 def test_total_less_than_available():
@@ -281,7 +303,6 @@ if __name__ == "__main__":
     seed_required_foreign_keys()
 
     try:
-        test_delete_all()
         test_create_valid_book()
         test_duplicate_isbn()
         test_short_isbn()

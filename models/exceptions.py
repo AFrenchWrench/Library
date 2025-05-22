@@ -6,6 +6,18 @@ class UserNotFound(Exception):
     pass
 
 
+class PublisherNotFound(Exception):
+    pass
+
+
+class AuthorNotFound(Exception):
+    pass
+
+
+class CategoryNotFound(Exception):
+    pass
+
+
 class DuplicateEmailError(Exception):
     pass
 
@@ -27,4 +39,8 @@ class DuplicateISBNError(Exception):
 
 
 class BookNotFound(Exception):
+    pass
+
+
+class PublisherInUseError(Exception):
     pass

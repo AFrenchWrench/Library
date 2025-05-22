@@ -2,11 +2,12 @@ from __future__ import annotations
 from mysql.connector import Error
 from db import get_connection
 from models.validators import PublisherValidator
-from models.db_exceptions import (
+from models.exceptions import (
     DatabaseOperationError,
     DuplicateNameError,
-    UserNotFound,
+    PublisherNotFound,
     ValidationFailedError,
+    PublisherInUseError,
 )
 
 
@@ -55,14 +56,50 @@ class Publisher:
             )
 
     @classmethod
-    def get_by_id(cls, id: int) -> Publisher:
+    def get_by_name(cls, name: str) -> Publisher:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cur:
-                cur.execute("SELECT * FROM publishers WHERE id=%s", (id,))
+                cur.execute("SELECT * FROM publishers WHERE name=%s", (name,))
                 row = cur.fetchone()
         if not row:
-            raise UserNotFound(f"No publisher found with ID {id}")
+            raise PublisherNotFound(f"No publisher found with name '{name}'")
         return cls(**row)
+
+    @classmethod
+    def delete_by_name(cls, name: str) -> None:
+        try:
+            with get_connection() as conn:
+                with conn.cursor(dictionary=True) as cur:
+                    cur.execute("SELECT id FROM publishers WHERE name = %s", (name,))
+                    result = cur.fetchone()
+                    if not result:
+                        raise PublisherNotFound(
+                            f"No publisher found with name '{name}'"
+                        )
+
+                    publisher_id = result["id"]
+
+                    try:
+                        cur.execute(
+                            "DELETE FROM publishers WHERE id = %s", (publisher_id,)
+                        )
+                        conn.commit()
+                    except Error as err:
+                        if err.errno == 1451:
+                            cur.execute(
+                                "SELECT title FROM books WHERE publisher_id = %s",
+                                (publisher_id,),
+                            )
+                            books = cur.fetchall()
+                            titles = [row["title"] for row in books]
+                            title_list = ", ".join(f"'{t}'" for t in titles)
+                            raise PublisherInUseError(
+                                f"Cannot delete publisher '{name}' because it is referenced by the following books: {title_list}"
+                            ) from err
+                        raise
+
+        except Error as err:
+            raise DatabaseOperationError("Failed to delete publisher.") from err
 
     @classmethod
     def delete_all(cls) -> None:

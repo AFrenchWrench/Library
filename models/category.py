@@ -2,10 +2,10 @@ from __future__ import annotations
 from mysql.connector import Error
 from db import get_connection
 from models.validators import CategoryValidator
-from models.db_exceptions import (
+from models.exceptions import (
     DatabaseOperationError,
     DuplicateNameError,
-    UserNotFound,
+    CategoryNotFound,
     ValidationFailedError,
 )
 
@@ -61,7 +61,7 @@ class Category:
                 cur.execute("SELECT * FROM categories WHERE id=%s", (id,))
                 row = cur.fetchone()
         if not row:
-            raise UserNotFound(f"No category found with ID {id}")
+            raise CategoryNotFound(f"No category found with ID {id}")
         return cls(**row)
 
     @classmethod

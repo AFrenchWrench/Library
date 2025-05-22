@@ -1,5 +1,5 @@
 from models.member import Member
-from models.db_exceptions import (
+from models.exceptions import (
     AdminAlreadyExistsError,
     UserNotFound,
     ValidationFailedError,
@@ -10,18 +10,8 @@ def print_result(test_name, passed):
     print(f"{'✅' if passed else '❌'} {test_name}")
 
 
-def test_delete_all():
-    try:
-        Member.delete_all()
-        print_result("Delete all members", True)
-    except Exception as e:
-        print_result("Delete all members", False)
-        print(e)
-
-
 def test_create_admin():
     try:
-        Member.delete_all()
         admin = Member(
             name="Admin One",
             email="admin@example.com",
@@ -33,10 +23,19 @@ def test_create_admin():
     except Exception as e:
         print_result("Create admin", False)
         print(e)
+    finally:
+        Member.delete_by_email("admin@example.com")
 
 
 def test_prevent_second_admin():
     try:
+        admin = Member(
+            name="Admin One",
+            email="admin@example.com",
+            password="Hash123@",
+            role="admin",
+        )
+        admin.save()
         second_admin = Member(
             name="Admin Two",
             email="admin2@example.com",
@@ -50,6 +49,8 @@ def test_prevent_second_admin():
     except Exception as e:
         print_result("Prevent second admin", False)
         print(e)
+    finally:
+        Member.delete_by_email("admin@example.com")
 
 
 def test_create_user():
@@ -65,6 +66,8 @@ def test_create_user():
     except Exception as e:
         print_result("Create regular user", False)
         print(e)
+    finally:
+        Member.delete_by_email("john@example.com")
 
 
 def test_invalid_role():
@@ -86,11 +89,20 @@ def test_invalid_role():
 
 def test_get_user_by_email():
     try:
-        user = Member.get_by_email("john@example.com")
+        user = Member(
+            name="John Doe",
+            email="john@example.com",
+            password="Abc1234#",
+            role="member",
+        )
+        user.save()
+        Member.get_by_email("john@example.com")
         print_result("Get user by email", True)
     except Exception as e:
         print_result("Get user by email", False)
         print(e)
+    finally:
+        Member.delete_by_email("john@example.com")
 
 
 def test_get_nonexistent_user():
@@ -106,7 +118,13 @@ def test_get_nonexistent_user():
 
 def test_update_user():
     try:
-        user = Member.get_by_email("john@example.com")
+        user = Member(
+            name="John Doe",
+            email="john@example.com",
+            password="Abc1234#",
+            role="member",
+        )
+        user.save()
         user.name = "Johnny Updated"
         user.save()
         updated = Member.get_by_email("john@example.com")
@@ -117,6 +135,8 @@ def test_update_user():
     except Exception as e:
         print_result("Update user", False)
         print(e)
+    finally:
+        Member.delete_by_email("john@example.com")
 
 
 def test_weak_password_no_uppercase():

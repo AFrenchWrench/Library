@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 from models.loan import Loan
-from models.db_exceptions import ValidationFailedError
+from models.exceptions import ValidationFailedError
 from models.book import Book
 from models.member import Member
 from models.author import Author

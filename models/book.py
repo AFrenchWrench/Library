@@ -2,7 +2,7 @@ from __future__ import annotations
 from mysql.connector import Error
 from db import get_connection
 from models.validators import BookValidator
-from models.db_exceptions import (
+from models.exceptions import (
     DatabaseOperationError,
     DuplicateISBNError,
     ValidationFailedError,

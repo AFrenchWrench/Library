@@ -5,7 +5,7 @@ from mysql.connector import Error
 from auth import hash_password
 from db import get_connection
 from models.validators import MemberValidator
-from models.db_exceptions import (
+from models.exceptions import (
     AdminAlreadyExistsError,
     UserNotFound,
     DuplicateEmailError,

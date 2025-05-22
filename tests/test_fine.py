@@ -6,7 +6,7 @@ from models.member import Member
 from models.author import Author
 from models.publisher import Publisher
 from models.category import Category
-from models.db_exceptions import ValidationFailedError
+from models.exceptions import ValidationFailedError
 
 seeded_member_id = None
 seeded_loan_id = None

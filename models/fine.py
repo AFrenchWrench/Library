@@ -1,7 +1,7 @@
 from __future__ import annotations
 from mysql.connector import Error
 from db import get_connection
-from models.db_exceptions import ValidationFailedError, DatabaseOperationError
+from models.exceptions import ValidationFailedError, DatabaseOperationError
 from models.validators import FineValidator
 
 
