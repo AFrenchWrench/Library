@@ -90,6 +90,20 @@ class Member:
         return cls(**row)
 
     @classmethod
+    def delete_by_email(cls, email: str) -> None:
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM members WHERE email=%s", (email,))
+                    if cur.rowcount == 0:
+                        raise UserNotFound(f"No user found with the email: {email}")
+                    conn.commit()
+        except Error as err:
+            raise DatabaseOperationError(
+                f"Failed to delete user with email {email}."
+            ) from err
+
+    @classmethod
     def delete_all(cls) -> None:
         try:
             with get_connection() as conn:

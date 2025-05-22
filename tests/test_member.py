@@ -204,6 +204,28 @@ def test_missing_fields():
         print(e)
 
 
+def test_delete_user_by_email():
+    try:
+        user = Member(
+            name="Temp User",
+            email="temp@example.com",
+            password="Abc1234#",
+            role="member",
+        )
+        user.save()
+
+        Member.delete_by_email("temp@example.com")
+
+        try:
+            Member.get_by_email("temp@example.com")
+            print_result("Delete user by email", False)
+        except UserNotFound:
+            print_result("Delete user by email", True)
+    except Exception as e:
+        print_result("Delete user by email", False)
+        print(e)
+
+
 if __name__ == "__main__":
     print("\nRunning Member tests...\n")
     test_delete_all()
@@ -219,3 +241,4 @@ if __name__ == "__main__":
     test_invalid_email_format()
     test_short_name()
     test_missing_fields()
+    test_delete_user_by_email()
