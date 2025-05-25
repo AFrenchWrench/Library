@@ -3,6 +3,7 @@ from mysql.connector import Error
 from db import get_connection
 from models.validators import AuthorValidator
 from models.exceptions import (
+    AuthorInUse,
     DatabaseOperationError,
     DuplicateNameError,
     AuthorNotFound,
@@ -55,14 +56,46 @@ class Author:
             )
 
     @classmethod
-    def get_by_id(cls, id: int) -> Author:
+    def get_by_name(cls, name: str) -> Author:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cur:
-                cur.execute("SELECT * FROM authors WHERE id=%s", (id,))
+                cur.execute("SELECT * FROM authors WHERE name=%s", (name,))
                 row = cur.fetchone()
         if not row:
-            raise AuthorNotFound(f"No author found with ID {id}")
+            raise AuthorNotFound(f"No author found with name '{name}'")
         return cls(**row)
+
+    @classmethod
+    def delete_by_name(cls, name: str) -> None:
+        try:
+            with get_connection() as conn:
+                with conn.cursor(dictionary=True) as cur:
+                    cur.execute("SELECT id FROM authors WHERE name = %s", (name,))
+                    result = cur.fetchone()
+                    if not result:
+                        raise AuthorNotFound(f"No author found with name '{name}'")
+
+                    author_id = result["id"]
+
+                    try:
+                        cur.execute("DELETE FROM authors WHERE id = %s", (author_id,))
+                        conn.commit()
+                    except Error as err:
+                        if err.errno == 1451:
+                            cur.execute(
+                                "SELECT title FROM books WHERE author_id = %s",
+                                (author_id,),
+                            )
+                            books = cur.fetchall()
+                            titles = [row["title"] for row in books]
+                            title_list = ", ".join(f"'{t}'" for t in titles)
+                            raise AuthorInUse(
+                                f"Cannot delete author '{name}' because it is referenced by the following books: {title_list}"
+                            ) from err
+                        raise
+
+        except Error as err:
+            raise DatabaseOperationError("Failed to delete author.") from err
 
     @classmethod
     def delete_all(cls) -> None:

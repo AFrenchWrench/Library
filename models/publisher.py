@@ -7,7 +7,7 @@ from models.exceptions import (
     DuplicateNameError,
     PublisherNotFound,
     ValidationFailedError,
-    PublisherInUseError,
+    PublisherInUse,
 )
 
 
@@ -93,7 +93,7 @@ class Publisher:
                             books = cur.fetchall()
                             titles = [row["title"] for row in books]
                             title_list = ", ".join(f"'{t}'" for t in titles)
-                            raise PublisherInUseError(
+                            raise PublisherInUse(
                                 f"Cannot delete publisher '{name}' because it is referenced by the following books: {title_list}"
                             ) from err
                         raise

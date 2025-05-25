@@ -42,5 +42,13 @@ class BookNotFound(Exception):
     pass
 
 
-class PublisherInUseError(Exception):
+class PublisherInUse(Exception):
+    pass
+
+
+class CategoryInUse(Exception):
+    pass
+
+
+class AuthorInUse(Exception):
     pass
