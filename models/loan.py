@@ -2,12 +2,15 @@ from __future__ import annotations
 from datetime import date, timedelta
 from mysql.connector import Error
 from db import get_connection
+from models.book import Book
 from models.exceptions import (
     ValidationFailedError,
     DatabaseOperationError,
     LoanNotFound,
 )
 from models.validators import LoanValidator
+
+LOAN_STATUSES = {"all", "active", "returned"}
 
 
 class Loan:
@@ -47,6 +50,9 @@ class Loan:
                     if self.id is None:
                         self.id = cur.lastrowid
                     conn.commit()
+            loaned_book = Book.get_by_id(self.book_id)
+            loaned_book.available_copies -= 1
+            loaned_book.save()
             return True
         except Error as err:
             raise DatabaseOperationError(f"Database error: {err}") from err
@@ -72,7 +78,7 @@ class Loan:
     @classmethod
     def get_by_user(cls, user_id: int, status: str = "all") -> list[Loan]:
         try:
-            if status not in ["all", "active", "returned"]:
+            if status not in LOAN_STATUSES:
                 raise ValueError(
                     """Status should be:
                         all for all types of loans
@@ -102,7 +108,7 @@ class Loan:
     @classmethod
     def get_by_book(cls, book_id: int, status: str = "all") -> list[Loan]:
         try:
-            if status not in ["all", "active", "returned"]:
+            if status not in LOAN_STATUSES:
                 raise ValueError(
                     """Status should be:
                         all for all types of loans
@@ -141,3 +147,12 @@ class Loan:
                     return cls(**row)
         except Error as err:
             raise DatabaseOperationError(f"Failed to get loan by ID: {err}") from err
+
+    @classmethod
+    def delete_by_id(cls, loan_id: int):
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM loans WHERE id = %s", (loan_id,))
+                if cur.rowcount == 0:
+                    raise LoanNotFound(f"Loan with ID {loan_id} not found.")
+                conn.commit()

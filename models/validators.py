@@ -293,6 +293,19 @@ class LoanValidator(BaseValidator):
                         f"User with ID {user_id} already has {count} active loans."
                     )
 
+    def validate_book_availability(self, book_id):
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT available_copies FROM books WHERE id = %s",
+                    (book_id,),
+                )
+                available = cur.fetchone()[0]
+                if available <= 0:
+                    raise ValueError(
+                        f"Book with ID {book_id} doesn't have any available copies."
+                    )
+
     def validate(self, loan, create):
         errors = {}
         fields = ["user_id", "book_id", "loan_date", "due_date", "return_date"]
@@ -305,6 +318,9 @@ class LoanValidator(BaseValidator):
                     validator(value)
                     if field == "user_id" and create:
                         self.validate_loan_count(value)
+                    elif field == "book_id" and create:
+                        self.validate_book_availability(value)
+
                 except ValueError as e:
                     errors[field] = str(e)
 
