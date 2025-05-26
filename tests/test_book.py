@@ -180,6 +180,30 @@ def test_empty_fields():
         print(e)
 
 
+def test_get_by_id():
+    try:
+        book = Book(
+            isbn="1234567890",
+            title="Python in Depth",
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
+            total_copies=5,
+            available_copies=5,
+        )
+        book.save()
+        fetched = Book.get_by_id(book.id)
+        if fetched.title == "Python in Depth":
+            print_result("Get book by ID", True)
+        else:
+            print_result("Get book by ID", False)
+    except Exception as e:
+        print_result("Get book by ID", False)
+        print(e)
+    finally:
+        Book.delete_by_isbn(book.isbn)
+
+
 def test_get_by_isbn():
     try:
         book = Book(
@@ -386,6 +410,7 @@ if __name__ == "__main__":
         test_long_isbn()
         test_invalid_title()
         test_empty_fields()
+        test_get_by_id()
         test_get_by_isbn()
         test_get_nonexistent_book()
         test_update_book_title()

@@ -70,6 +70,22 @@ def test_non_english_category():
         print(e)
 
 
+def test_get_by_id():
+    try:
+        cat = Category(name="History")
+        cat.save()
+        found = Category.get_by_id(cat.id)
+        if found.name == "History":
+            print_result("Get category by ID", True)
+        else:
+            print_result("Get category by ID", False)
+    except Exception as e:
+        print_result("Get category by ID", False)
+        print(e)
+    finally:
+        Category.delete_by_name("History")
+
+
 def test_get_by_name():
     try:
         cat = Category(name="History")
@@ -204,6 +220,7 @@ if __name__ == "__main__":
     test_duplicate_category()
     test_empty_category_name()
     test_non_english_category()
+    test_get_by_id()
     test_get_by_name()
     test_get_nonexistent_category()
     test_update_category()

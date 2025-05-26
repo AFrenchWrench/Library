@@ -98,6 +98,27 @@ def test_invalid_role():
         print(e)
 
 
+def test_get_user_by_id():
+    try:
+        user = User(
+            name="John Doe",
+            email="john@example.com",
+            password="Abc1234#",
+            role="member",
+        )
+        user.save()
+        fetched = User.get_by_id(user.id)
+        if fetched.name == "John Doe":
+            print_result("Get user by ID", True)
+        else:
+            print_result("Get user by ID", False)
+    except Exception as e:
+        print_result("Get user by ID", False)
+        print(e)
+    finally:
+        User.delete_by_email("john@example.com")
+
+
 def test_get_user_by_email():
     try:
         user = User(
@@ -336,6 +357,7 @@ if __name__ == "__main__":
     test_prevent_second_admin()
     test_create_user()
     test_invalid_role()
+    test_get_user_by_id()
     test_get_user_by_email()
     test_get_nonexistent_user()
     test_update_user()

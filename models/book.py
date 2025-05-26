@@ -100,6 +100,16 @@ class Book:
             )
 
     @classmethod
+    def get_by_id(cls, book_id: int) -> Book:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute("SELECT * FROM books WHERE id = %s", (book_id,))
+                row = cur.fetchone()
+                if not row:
+                    raise BookNotFound(f"No book found with ID {book_id}")
+                return cls(**row)
+
+    @classmethod
     def get_by_isbn(cls, isbn: str) -> Book:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cur:

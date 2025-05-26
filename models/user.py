@@ -81,6 +81,16 @@ class User:
             )
 
     @classmethod
+    def get_by_id(cls, user_id: int) -> User:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+                row = cur.fetchone()
+                if not row:
+                    raise UserNotFound(f"No user found with ID {user_id}")
+                return cls(**row)
+
+    @classmethod
     def get_by_email(cls, email: str) -> User:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cur:

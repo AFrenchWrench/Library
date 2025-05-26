@@ -56,6 +56,18 @@ class Publisher:
             )
 
     @classmethod
+    def get_by_id(cls, publisher_id: int) -> Publisher:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute("SELECT * FROM publishers WHERE id = %s", (publisher_id,))
+                row = cur.fetchone()
+                if not row:
+                    raise PublisherNotFound(
+                        f"No publisher found with ID {publisher_id}"
+                    )
+                return cls(**row)
+
+    @classmethod
     def get_by_name(cls, name: str) -> Publisher:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cur:

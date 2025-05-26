@@ -56,6 +56,16 @@ class Author:
             )
 
     @classmethod
+    def get_by_id(cls, author_id: int) -> Author:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute("SELECT * FROM authors WHERE id = %s", (author_id,))
+                row = cur.fetchone()
+                if not row:
+                    raise AuthorNotFound(f"No author found with ID {author_id}")
+                return cls(**row)
+
+    @classmethod
     def get_by_name(cls, name: str) -> Author:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cur:

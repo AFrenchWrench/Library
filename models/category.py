@@ -56,6 +56,16 @@ class Category:
             )
 
     @classmethod
+    def get_by_id(cls, category_id: int) -> Category:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute("SELECT * FROM categories WHERE id = %s", (category_id,))
+                row = cur.fetchone()
+                if not row:
+                    raise CategoryNotFound(f"No category found with ID {category_id}")
+                return cls(**row)
+
+    @classmethod
     def get_by_name(cls, name: str) -> Category:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cur:

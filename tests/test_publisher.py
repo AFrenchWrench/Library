@@ -82,6 +82,22 @@ def test_long_name():
         print(e)
 
 
+def test_get_by_id():
+    try:
+        publisher = Publisher(name="Get Test Publisher")
+        publisher.save()
+        fetched = Publisher.get_by_id(publisher.id)
+        if fetched.name == "Get Test Publisher":
+            print_result("Get publisher by ID", True)
+        else:
+            print_result("Get publisher by ID", False)
+    except Exception as e:
+        print_result("Get publisher by ID", False)
+        print(e)
+    finally:
+        Publisher.delete_by_name(publisher.name)
+
+
 def test_get_by_name():
     try:
         publisher = Publisher(name="Get Test Publisher")
@@ -211,6 +227,7 @@ if __name__ == "__main__":
     test_empty_name()
     test_non_english_name()
     test_long_name()
+    test_get_by_id()
     test_get_by_name()
     test_get_nonexistent_publisher()
     test_update_publisher_name()

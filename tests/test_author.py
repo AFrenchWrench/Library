@@ -70,6 +70,22 @@ def test_non_english_author_name():
         print(e)
 
 
+def test_get_author_by_id():
+    try:
+        author = Author(name="Isaac Asimov")
+        author.save()
+        fetched = Author.get_by_id(author.id)
+        if fetched.name == "Isaac Asimov":
+            print_result("Get author by ID", True)
+        else:
+            print_result("Get author by ID", False)
+    except Exception as e:
+        print_result("Get author by ID", False)
+        print(e)
+    finally:
+        Author.delete_by_name("Isaac Asimov")
+
+
 def test_get_author_by_name():
     try:
         author = Author(name="Isaac Asimov")
@@ -204,6 +220,7 @@ if __name__ == "__main__":
     test_duplicate_author()
     test_empty_author_name()
     test_non_english_author_name()
+    test_get_author_by_id()
     test_get_author_by_name()
     test_get_nonexistent_author()
     test_update_author()
