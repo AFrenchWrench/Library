@@ -4,9 +4,10 @@ from datetime import date
 from mysql.connector import Error
 from auth import hash_password
 from db import get_connection
-from models.validators import MemberValidator
+from models.validators import UserValidator
 from models.exceptions import (
     AdminAlreadyExistsError,
+    UserInUse,
     UserNotFound,
     DuplicateEmailError,
     DatabaseOperationError,
@@ -14,7 +15,7 @@ from models.exceptions import (
 )
 
 
-class Member:
+class User:
     def __init__(
         self,
         name: str,
@@ -32,7 +33,7 @@ class Member:
         self.role = role
 
     def validate(self) -> None:
-        validator = MemberValidator()
+        validator = UserValidator()
         validator.validate(self)
 
     def prepare_for_save(self):
@@ -60,7 +61,7 @@ class Member:
                 raise AdminAlreadyExistsError("Only one admin is allowed.") from err
             elif err.errno == 1062 and "email" in err.msg.lower():
                 raise DuplicateEmailError(
-                    f"A member with this email already exists: {self.email}"
+                    f"A user with this email already exists: {self.email}"
                 ) from err
             else:
                 raise DatabaseOperationError(
@@ -70,20 +71,20 @@ class Member:
     def _build_query(self) -> tuple[str, tuple]:
         if self.id is None:
             return (
-                "INSERT INTO members (name, email, password, joined_date, role) VALUES (%s, %s, %s, %s, %s)",
+                "INSERT INTO users (name, email, password, joined_date, role) VALUES (%s, %s, %s, %s, %s)",
                 (self.name, self.email, self.password, self.joined_date, self.role),
             )
         else:
             return (
-                "UPDATE members SET name=%s, email=%s, password=%s WHERE id=%s",
+                "UPDATE users SET name=%s, email=%s, password=%s WHERE id=%s",
                 (self.name, self.email, self.password, self.id),
             )
 
     @classmethod
-    def get_by_email(cls, email: str) -> Member:
+    def get_by_email(cls, email: str) -> User:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cur:
-                cur.execute("SELECT * FROM members WHERE email=%s", (email,))
+                cur.execute("SELECT * FROM users WHERE email=%s", (email,))
                 row = cur.fetchone()
         if not row:
             raise UserNotFound(f"No user found with the email: {email}")
@@ -93,22 +94,30 @@ class Member:
     def delete_by_email(cls, email: str) -> None:
         try:
             with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM members WHERE email=%s", (email,))
-                    if cur.rowcount == 0:
-                        raise UserNotFound(f"No user found with the email: {email}")
-                    conn.commit()
-        except Error as err:
-            raise DatabaseOperationError(
-                f"Failed to delete user with email {email}."
-            ) from err
+                with conn.cursor(dictionary=True) as cur:
+                    cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+                    result = cur.fetchone()
+                    if not result:
+                        raise UserNotFound(f"No user found with email '{email}'")
 
-    @classmethod
-    def delete_all(cls) -> None:
-        try:
-            with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM members;")
-                    conn.commit()
-        except Exception as e:
-            raise DatabaseOperationError("Failed to delete members.") from e
+                    user_id = result["id"]
+
+                    try:
+                        cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+                        conn.commit()
+                    except Error as err:
+                        if err.errno == 1451:
+                            cur.execute(
+                                "SELECT id FROM loans WHERE user_id = %s",
+                                (user_id,),
+                            )
+                            books = cur.fetchall()
+                            ids = [row["id"] for row in books]
+                            id_list = ", ".join(f"'{t}'" for t in ids)
+                            raise UserInUse(
+                                f"Cannot delete user '{email}' because it is referenced by the following loans: {id_list}"
+                            ) from err
+                        raise
+
+        except Error as err:
+            raise DatabaseOperationError("Failed to delete user.") from err

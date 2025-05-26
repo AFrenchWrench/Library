@@ -47,7 +47,7 @@ class BaseValidator:
             raise ValueError(f"Error validating foreign key for '{table}': {e}")
 
 
-class MemberValidator(BaseValidator):
+class UserValidator(BaseValidator):
 
     def validate_name(self, name):
         self.validate_to_be_in_english(name)
@@ -78,7 +78,7 @@ class MemberValidator(BaseValidator):
                 f"Role '{role}' is not valid. Must be 'admin' or 'member'."
             )
 
-    def validate(self, member):
+    def validate(self, user):
         errors = {}
 
         attrs = ["name", "email", "password", "joined_date", "role"]
@@ -87,7 +87,7 @@ class MemberValidator(BaseValidator):
             validator_name = f"validate_{attr}"
             validator = getattr(self, validator_name, None)
             if callable(validator):
-                value = getattr(member, attr)
+                value = getattr(user, attr)
                 try:
                     if value == "" or value == None:
                         raise ValueError("Field can't be empty")
@@ -261,8 +261,8 @@ class BookValidator(BaseValidator):
 
 class LoanValidator(BaseValidator):
 
-    def validate_member_id(self, member_id):
-        self.validate_foreign_key_exists("members", member_id)
+    def validate_user_id(self, user_id):
+        self.validate_foreign_key_exists("users", user_id)
 
     def validate_book_id(self, book_id):
         self.validate_foreign_key_exists("books", book_id)
@@ -277,9 +277,25 @@ class LoanValidator(BaseValidator):
         if return_date is not None:
             self.validate_date(return_date)
 
-    def validate(self, loan):
+    def validate_loan_count(self, user_id):
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COUNT(*) FROM loans
+                    WHERE user_id = %s AND return_date IS NULL
+                    """,
+                    (user_id,),
+                )
+                count = cur.fetchone()[0]
+                if count >= 3:
+                    raise ValueError(
+                        f"User with ID {user_id} already has {count} active loans."
+                    )
+
+    def validate(self, loan, create):
         errors = {}
-        fields = ["member_id", "book_id", "loan_date", "due_date", "return_date"]
+        fields = ["user_id", "book_id", "loan_date", "due_date", "return_date"]
 
         for field in fields:
             validator = getattr(self, f"validate_{field}", None)
@@ -287,6 +303,8 @@ class LoanValidator(BaseValidator):
                 value = getattr(loan, field)
                 try:
                     validator(value)
+                    if field == "user_id" and create:
+                        self.validate_loan_count(value)
                 except ValueError as e:
                     errors[field] = str(e)
 
@@ -296,8 +314,8 @@ class LoanValidator(BaseValidator):
 
 class FineValidator(BaseValidator):
 
-    def validate_member_id(self, member_id):
-        self.validate_foreign_key_exists("members", member_id)
+    def validate_user_id(self, user_id):
+        self.validate_foreign_key_exists("users", user_id)
 
     def validate_loan_id(self, loan_id):
         self.validate_foreign_key_exists("loans", loan_id)
@@ -311,7 +329,7 @@ class FineValidator(BaseValidator):
 
     def validate(self, fine):
         errors = {}
-        fields = ["member_id", "loan_id", "amount", "paid"]
+        fields = ["user_id", "loan_id", "amount", "paid"]
 
         for field in fields:
             validator = getattr(self, f"validate_{field}", None)

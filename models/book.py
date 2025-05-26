@@ -3,6 +3,7 @@ from mysql.connector import Error
 from db import get_connection
 from models.validators import BookValidator
 from models.exceptions import (
+    BookInUse,
     DatabaseOperationError,
     DuplicateISBNError,
     ValidationFailedError,
@@ -112,24 +113,30 @@ class Book:
     def delete_by_isbn(cls, isbn: str) -> None:
         try:
             with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM books WHERE isbn = %s", (isbn,))
-                    if cur.rowcount == 0:
-                        raise BookNotFound(f"No book found with ISBN: {isbn}")
-                    conn.commit()
-        except BookNotFound:
-            raise
-        except Exception as e:
-            raise DatabaseOperationError(
-                f"Failed to delete book with ISBN: {isbn}"
-            ) from e
+                with conn.cursor(dictionary=True) as cur:
+                    cur.execute("SELECT id FROM books WHERE isbn = %s", (isbn,))
+                    result = cur.fetchone()
+                    if not result:
+                        raise BookNotFound(f"No book found with isbn '{isbn}'")
 
-    @classmethod
-    def delete_all(cls) -> None:
-        try:
-            with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM books")
-                    conn.commit()
-        except Exception as e:
-            raise DatabaseOperationError("Failed to delete books.") from e
+                    book_id = result["id"]
+
+                    try:
+                        cur.execute("DELETE FROM books WHERE id = %s", (book_id,))
+                        conn.commit()
+                    except Error as err:
+                        if err.errno == 1451:
+                            cur.execute(
+                                "SELECT id FROM loans WHERE book_id = %s",
+                                (book_id,),
+                            )
+                            books = cur.fetchall()
+                            ids = [row["id"] for row in books]
+                            id_list = ", ".join(f"'{t}'" for t in ids)
+                            raise BookInUse(
+                                f"Cannot delete book '{isbn}' because it is referenced by the following loans: {id_list}"
+                            ) from err
+                        raise
+
+        except Error as err:
+            raise DatabaseOperationError("Failed to delete book.") from err

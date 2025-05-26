@@ -1,5 +1,5 @@
--- members
-CREATE TABLE IF NOT EXISTS members (
+-- users
+CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -42,21 +42,21 @@ CREATE TABLE IF NOT EXISTS books (
 -- loans & fines
 CREATE TABLE IF NOT EXISTS loans (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  member_id INT,
+  user_id INT,
   book_id INT,
   loan_date DATE NOT NULL,
   due_date DATE NOT NULL,
   return_date DATE,
-  FOREIGN KEY (member_id) REFERENCES members(id),
+  FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (book_id) REFERENCES books(id)
 );
 
 CREATE TABLE IF NOT EXISTS fines (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  member_id INT,
+  user_id INT,
   loan_id INT,
   amount DECIMAL(6,2),
   paid BOOLEAN DEFAULT FALSE,
-  FOREIGN KEY (member_id) REFERENCES members(id),
+  FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (loan_id) REFERENCES loans(id)
 );

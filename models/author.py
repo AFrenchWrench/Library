@@ -96,13 +96,3 @@ class Author:
 
         except Error as err:
             raise DatabaseOperationError("Failed to delete author.") from err
-
-    @classmethod
-    def delete_all(cls) -> None:
-        try:
-            with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM authors;")
-                    conn.commit()
-        except Exception as e:
-            raise DatabaseOperationError("Failed to delete authors.") from e

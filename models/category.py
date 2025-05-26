@@ -98,13 +98,3 @@ class Category:
 
         except Error as err:
             raise DatabaseOperationError("Failed to delete category.") from err
-
-    @classmethod
-    def delete_all(cls) -> None:
-        try:
-            with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM categories;")
-                    conn.commit()
-        except Exception as e:
-            raise DatabaseOperationError("Failed to delete categories.") from e

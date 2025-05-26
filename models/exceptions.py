@@ -42,6 +42,18 @@ class BookNotFound(Exception):
     pass
 
 
+class LoanNotFound(Exception):
+    pass
+
+
+class UserInUse(Exception):
+    pass
+
+
+class BookInUse(Exception):
+    pass
+
+
 class PublisherInUse(Exception):
     pass
 

@@ -1,13 +1,20 @@
 from models.book import Book
 from models.exceptions import (
+    AuthorInUse,
+    BookInUse,
+    CategoryInUse,
+    PublisherInUse,
+    UserInUse,
     ValidationFailedError,
     DuplicateISBNError,
     BookNotFound,
 )
 from db import get_connection
 from models.author import Author
+from models.loan import Loan
 from models.publisher import Publisher
 from models.category import Category
+from models.user import User
 
 seeded_author_id = None
 seeded_publisher_id = None
@@ -298,6 +305,76 @@ def test_delete_by_isbn():
         print(e)
 
 
+def test_book_in_use():
+    try:
+        user = User(name="Temp User", email="Temp@gmail.com", password="Abcd1234#")
+        user.save()
+
+        author = Author(name="Temp Author")
+        author.save()
+
+        publisher = Publisher(name="Temp Publisher")
+        publisher.save()
+
+        category = Category(name="Temp Category")
+        category.save()
+
+        book = Book(
+            isbn="9988776655",
+            title="InUse Book",
+            author_id=author.id,
+            publisher_id=publisher.id,
+            category_id=category.id,
+            total_copies=5,
+            available_copies=5,
+        )
+        book.save()
+
+        loan = Loan(
+            user_id=user.id,
+            book_id=book.id,
+        )
+        loan.save()
+
+        try:
+            Book.delete_by_isbn("9988776655")
+            print_result("Reject deletion of in-use book", False)
+        except BookInUse:
+            print_result("Reject deletion of in-use book", True)
+        except Exception as e:
+            print_result("Reject deletion of in-use book", False)
+            print(e)
+
+    except Exception as e:
+        print_result("Reject deletion of in-use book", False)
+        print(e)
+    finally:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM loans WHERE id = %s", (loan.id,))
+                conn.commit()
+        try:
+            Book.delete_by_isbn("9988776655")
+        except BookInUse:
+            pass
+        try:
+            User.delete_by_email("Temp@gmail.com")
+        except UserInUse:
+            pass
+        try:
+            Publisher.delete_by_name("Temp Publisher")
+        except PublisherInUse:
+            pass
+        try:
+            Category.delete_by_name("Temp Category")
+        except CategoryInUse:
+            pass
+        try:
+            Author.delete_by_name("Temp Author")
+        except AuthorInUse:
+            pass
+
+
 if __name__ == "__main__":
     print("\nRunning Book tests...\n")
     seed_required_foreign_keys()
@@ -315,6 +392,7 @@ if __name__ == "__main__":
         test_total_less_than_available()
         test_negative_copies()
         test_delete_by_isbn()
+        test_book_in_use()
     finally:
         print("\nCleaning up seeded foreign keys...")
         delete_seeded_foreign_keys()
