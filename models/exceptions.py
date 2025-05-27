@@ -46,6 +46,10 @@ class LoanNotFound(Exception):
     pass
 
 
+class FineNotFound(Exception):
+    pass
+
+
 class UserInUse(Exception):
     pass
 
