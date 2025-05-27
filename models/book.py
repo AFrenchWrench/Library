@@ -150,3 +150,11 @@ class Book:
 
         except Error as err:
             raise DatabaseOperationError("Failed to delete book.") from err
+
+    @classmethod
+    def get_all(cls) -> list["Book"]:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute("SELECT * FROM books")
+                rows = cur.fetchall()
+                return [cls(**row) for row in rows]

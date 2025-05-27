@@ -57,7 +57,9 @@ class Loan:
                         if fine:
                             return
 
-                Fine(user_id=self.user_id, loan_id=self.id, amount=fine_amount).save()
+                fine = Fine(user_id=self.user_id, loan_id=self.id, amount=fine_amount)
+                fine.save()
+                return fine
 
             except Error as err:
                 raise DatabaseOperationError(
@@ -83,7 +85,6 @@ class Loan:
                 loaned_book = Book.get_by_id(self.book_id)
                 loaned_book.available_copies -= 1
                 loaned_book.save()
-            self.check_for_fine()
             return True
         except Error as err:
             raise DatabaseOperationError(f"Database error: {err}") from err
