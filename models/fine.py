@@ -119,6 +119,17 @@ class Fine:
             ) from err
 
     @classmethod
+    def get_all(cls):
+        try:
+            with get_connection() as conn:
+                with conn.cursor(dictionary=True) as cur:
+                    cur.execute("SELECT * FROM fines")
+                    results = cur.fetchall()
+                    return [cls(**row) for row in results]
+        except Error as err:
+            raise Exception(f"Failed to fetch fines: {err}")
+
+    @classmethod
     def delete_by_id(cls, fine_id: int) -> None:
         with get_connection() as conn:
             with conn.cursor() as cur:

@@ -218,6 +218,7 @@ def test_fine_created_for_late_return():
         loan = Loan.get_by_id(loan.id)
         loan.return_date = return_date
         loan.save()
+        loan.check_for_fine()
 
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -270,6 +271,68 @@ def test_reject_loan_if_user_has_2_unpaid_fines():
                 conn.commit()
 
 
+def test_available_copies_decrease_on_loan():
+    try:
+        book = Book(
+            isbn="AVAILDECR123",
+            title="Available Count Test",
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
+            total_copies=5,
+            available_copies=5,
+        )
+        book.save()
+        before = book.available_copies
+
+        loan = Loan(user_id=seeded_user_id, book_id=book.id)
+        loan.save()
+
+        updated_book = Book.get_by_id(book.id)
+        if updated_book.available_copies == before - 1:
+            print_result("Decrease available_copies on loan", True)
+        else:
+            print_result("Decrease available_copies on loan", False)
+    except Exception as e:
+        print_result("Decrease available_copies on loan", False)
+        print(e)
+    finally:
+        Loan.delete_by_id(loan.id)
+        Book.delete_by_isbn("AVAILDECR123")
+
+
+def test_returning_book_increases_available_copies():
+    try:
+        book = Book(
+            isbn="RETURNTEST123",
+            title="Return Test Book",
+            author_id=seeded_author_id,
+            publisher_id=seeded_publisher_id,
+            category_id=seeded_category_id,
+            total_copies=5,
+            available_copies=5,
+        )
+        book.save()
+
+        loan = Loan(user_id=seeded_user_id, book_id=book.id)
+        loan.save()
+
+        loan.return_date = loan.due_date
+        loan.save()
+
+        updated_book = Book.get_by_id(book.id)
+        if updated_book.available_copies == 5:
+            print_result("Increase available_copies on return", True)
+        else:
+            print_result("Increase available_copies on return", False)
+    except Exception as e:
+        print_result("Increase available_copies on return", False)
+        print(e)
+    finally:
+        Loan.delete_by_id(loan.id)
+        Book.delete_by_isbn("RETURNTEST123")
+
+
 if __name__ == "__main__":
     print("\nRunning Loan tests...\n")
     seed_required_foreign_keys()
@@ -284,6 +347,8 @@ if __name__ == "__main__":
         test_delete_loan()
         test_fine_created_for_late_return()
         test_reject_loan_if_user_has_2_unpaid_fines()
+        test_available_copies_decrease_on_loan()
+        test_returning_book_increases_available_copies()
     finally:
         print("\nCleaning up seeded foreign keys...")
         delete_seeded_foreign_keys()

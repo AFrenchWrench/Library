@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from re import match
 from db import get_connection
 
@@ -12,7 +13,7 @@ class BaseValidator:
 
     @staticmethod
     def validate_to_be_whole_number(number):
-        if not isinstance(number, (int, float)):
+        if not isinstance(number, (int, float, Decimal)):
             raise ValueError("Input must be a number.")
         if number % 1 != 0:
             raise ValueError("Number must be whole (no decimals).")
@@ -78,7 +79,7 @@ class UserValidator(BaseValidator):
                 f"Role '{role}' is not valid. Must be 'admin' or 'member'."
             )
 
-    def validate(self, user):
+    def validate(self, user, create):
         errors = {}
 
         attrs = ["name", "email", "password", "joined_date", "role"]
@@ -91,6 +92,8 @@ class UserValidator(BaseValidator):
                 try:
                     if value == "" or value == None:
                         raise ValueError("Field can't be empty")
+                    if not create and attr == "joined_date":
+                        continue
                     validator(value)
                 except ValueError as e:
                     errors[attr] = str(e)

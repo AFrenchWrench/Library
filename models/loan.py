@@ -75,16 +75,21 @@ class Loan:
         query, values = self._build_query()
         create = self.id is None
         try:
+            loaned_book = Book.get_by_id(self.book_id)
+            if create:
+                loaned_book.available_copies -= 1
+                loaned_book.save()
+            elif not create and self.return_date:
+                existing = Loan.get_by_id(self.id)
+                if existing.return_date is None:
+                    loaned_book.available_copies += 1
+                loaned_book.save()
             with get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(query, values)
                     if self.id is None:
                         self.id = cur.lastrowid
                     conn.commit()
-            if create:
-                loaned_book = Book.get_by_id(self.book_id)
-                loaned_book.available_copies -= 1
-                loaned_book.save()
             return True
         except Error as err:
             raise DatabaseOperationError(f"Database error: {err}") from err
@@ -179,6 +184,17 @@ class Loan:
                     return cls(**row)
         except Error as err:
             raise DatabaseOperationError(f"Failed to get loan by ID: {err}") from err
+
+    @classmethod
+    def get_all(cls):
+        try:
+            with get_connection() as conn:
+                with conn.cursor(dictionary=True) as cur:
+                    cur.execute("SELECT * FROM loans")
+                    results = cur.fetchall()
+                    return [cls(**row) for row in results]
+        except Error as err:
+            raise Exception(f"Failed to fetch loans: {err}")
 
     @classmethod
     def delete_by_id(cls, loan_id: int):

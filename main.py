@@ -7,7 +7,7 @@ def main():
     print("2. Run GUI (not implemented)")
     choice = input("Choose interface: ")
     if choice == "1":
-        from cli import menu
+        from cli.cli import menu
 
         menu()
     else:

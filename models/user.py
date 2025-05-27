@@ -34,7 +34,7 @@ class User:
 
     def validate(self) -> None:
         validator = UserValidator()
-        validator.validate(self)
+        validator.validate(self, False if self.id else True)
 
     def prepare_for_save(self):
         self.password = hash_password(self.password)
@@ -131,3 +131,14 @@ class User:
 
         except Error as err:
             raise DatabaseOperationError("Failed to delete user.") from err
+
+    @classmethod
+    def get_all(cls):
+        try:
+            with get_connection() as conn:
+                with conn.cursor(dictionary=True) as cur:
+                    cur.execute("SELECT * FROM users")
+                    results = cur.fetchall()
+                    return [cls(**row) for row in results]
+        except Error as err:
+            raise Exception(f"Failed to fetch users: {err}")
