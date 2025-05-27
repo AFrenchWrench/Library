@@ -293,6 +293,22 @@ class LoanValidator(BaseValidator):
                         f"User with ID {user_id} already has {count} active loans."
                     )
 
+    def validate_fine_count(self, user_id):
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COUNT(*) FROM fines
+                    WHERE user_id = %s AND paid = FALSE
+                    """,
+                    (user_id,),
+                )
+                count = cur.fetchone()[0]
+                if count >= 2:
+                    raise ValueError(
+                        f"User with ID {user_id} has {count} unpaid fines and cannot borrow more books."
+                    )
+
     def validate_book_availability(self, book_id):
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -318,6 +334,7 @@ class LoanValidator(BaseValidator):
                     validator(value)
                     if field == "user_id" and create:
                         self.validate_loan_count(value)
+                        self.validate_fine_count(value)
                     elif field == "book_id" and create:
                         self.validate_book_availability(value)
 

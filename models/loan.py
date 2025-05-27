@@ -8,6 +8,7 @@ from models.exceptions import (
     DatabaseOperationError,
     LoanNotFound,
 )
+from models.fine import Fine
 from models.validators import LoanValidator
 
 LOAN_STATUSES = {"all", "active", "returned"}
@@ -35,6 +36,34 @@ class Loan:
         validator = LoanValidator()
         validator.validate(self, False if self.id else True)
 
+    def check_for_fine(self):
+        if not self.return_date or not self.due_date:
+            return
+
+        grace_period_end = self.due_date + timedelta(days=3)
+
+        if self.return_date > grace_period_end:
+            overdue_days = (self.return_date - grace_period_end).days
+            fine_amount = overdue_days * 25
+
+            try:
+                with get_connection() as conn:
+                    with conn.cursor(dictionary=True) as cur:
+                        cur.execute(
+                            "SELECT id FROM fines WHERE loan_id = %s", (self.id,)
+                        )
+                        fine = cur.fetchone()
+
+                        if fine:
+                            return
+
+                Fine(user_id=self.user_id, loan_id=self.id, amount=fine_amount).save()
+
+            except Error as err:
+                raise DatabaseOperationError(
+                    f"Failed to check or create fine: {err}"
+                ) from err
+
     def save(self) -> bool:
         try:
             self.validate()
@@ -42,7 +71,7 @@ class Loan:
             raise ValidationFailedError(f"Validation failed:\n{e}") from e
 
         query, values = self._build_query()
-
+        create = self.id is None
         try:
             with get_connection() as conn:
                 with conn.cursor() as cur:
@@ -50,9 +79,11 @@ class Loan:
                     if self.id is None:
                         self.id = cur.lastrowid
                     conn.commit()
-            loaned_book = Book.get_by_id(self.book_id)
-            loaned_book.available_copies -= 1
-            loaned_book.save()
+            if create:
+                loaned_book = Book.get_by_id(self.book_id)
+                loaned_book.available_copies -= 1
+                loaned_book.save()
+            self.check_for_fine()
             return True
         except Error as err:
             raise DatabaseOperationError(f"Database error: {err}") from err

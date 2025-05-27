@@ -1,3 +1,4 @@
+from datetime import timedelta
 from models.loan import Loan
 from models.book import Book
 from models.user import User
@@ -42,8 +43,8 @@ def seed_required_foreign_keys():
         author_id=seeded_author_id,
         publisher_id=seeded_publisher_id,
         category_id=seeded_category_id,
-        total_copies=3,
-        available_copies=3,
+        total_copies=10,
+        available_copies=10,
     )
     book.save()
     seeded_book_id = book.id
@@ -197,6 +198,78 @@ def test_delete_loan():
         print(e)
 
 
+def test_fine_created_for_late_return():
+    try:
+        loan = Loan(user_id=seeded_user_id, book_id=seeded_book_id)
+        loan.save()
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT due_date FROM loans WHERE id = %s", (loan.id,))
+                due_date = cur.fetchone()[0]
+                return_date = due_date + timedelta(days=10)
+
+                cur.execute(
+                    "UPDATE loans SET return_date = %s WHERE id = %s",
+                    (return_date, loan.id),
+                )
+                conn.commit()
+
+        loan = Loan.get_by_id(loan.id)
+        loan.return_date = return_date
+        loan.save()
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT amount FROM fines WHERE loan_id = %s", (loan.id,))
+                fine = cur.fetchone()
+                if fine and fine[0] == 25 * 7:
+                    print_result("Fine created for late return", True)
+                else:
+                    print_result("Fine created for late return", False)
+    except Exception as e:
+        print_result("Fine created for late return", False)
+        print(e)
+    finally:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM fines WHERE loan_id = %s", (loan.id,))
+                conn.commit()
+        Loan.delete_by_id(loan.id)
+
+
+def test_reject_loan_if_user_has_2_unpaid_fines():
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                for i in range(2):
+                    loan = Loan(user_id=seeded_user_id, book_id=seeded_book_id)
+                    loan.save()
+                    cur.execute(
+                        """
+                        INSERT INTO fines (user_id, loan_id, amount, paid)
+                        VALUES (%s, %s, %s, %s)
+                    """,
+                        (seeded_user_id, loan.id, 50, False),
+                    )
+                conn.commit()
+
+        loan = Loan(user_id=seeded_user_id, book_id=seeded_book_id)
+        loan.save()
+        print_result("Reject loan with 2 unpaid fines", False)
+    except ValidationFailedError:
+        print_result("Reject loan with 2 unpaid fines", True)
+    except Exception as e:
+        print_result("Reject loan with 2 unpaid fines", False)
+        print(e)
+    finally:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM fines WHERE user_id = %s", (seeded_user_id,))
+                cur.execute("DELETE FROM loans WHERE user_id = %s", (seeded_user_id,))
+                conn.commit()
+
+
 if __name__ == "__main__":
     print("\nRunning Loan tests...\n")
     seed_required_foreign_keys()
@@ -209,6 +282,8 @@ if __name__ == "__main__":
         test_get_by_id()
         test_get_nonexistent_loan()
         test_delete_loan()
+        test_fine_created_for_late_return()
+        test_reject_loan_if_user_has_2_unpaid_fines()
     finally:
         print("\nCleaning up seeded foreign keys...")
         delete_seeded_foreign_keys()
