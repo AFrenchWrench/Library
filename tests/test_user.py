@@ -1,3 +1,4 @@
+from auth import verify_password
 from db import get_connection
 from models.author import Author
 from models.book import Book
@@ -169,6 +170,30 @@ def test_update_user():
             print_result("Update user", False)
     except Exception as e:
         print_result("Update user", False)
+        print(e)
+    finally:
+        User.delete_by_email("john@example.com")
+
+
+def test_password_still_valid_after_update():
+    try:
+        user = User(
+            name="John Doe",
+            email="john@example.com",
+            password="Abc1234#",
+            role="member",
+        )
+        user.save()
+        fetched = User.get_by_email("john@example.com")
+        fetched.name = "Johnny Updated"
+        fetched.save()
+        updated = User.get_by_email("john@example.com")
+        if verify_password("Abc1234#", updated.password):
+            print_result("Password still valid after update", True)
+        else:
+            print_result("Password still valid after update", False)
+    except Exception as e:
+        print_result("Password still valid after update", False)
         print(e)
     finally:
         User.delete_by_email("john@example.com")
@@ -361,6 +386,7 @@ if __name__ == "__main__":
     test_get_user_by_email()
     test_get_nonexistent_user()
     test_update_user()
+    test_password_still_valid_after_update()
     test_weak_password_no_uppercase()
     test_weak_password_no_special_char()
     test_invalid_email_format()

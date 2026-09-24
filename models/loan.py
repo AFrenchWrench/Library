@@ -20,16 +20,16 @@ class Loan:
         self,
         user_id: int,
         book_id: int,
-        loan_date: date = date.today(),
-        due_date: date = date.today() + timedelta(days=14),
+        loan_date: date | None = None,
+        due_date: date | None = None,
         return_date: date | None = None,
         id: int | None = None,
     ) -> None:
         self.id = id
         self.user_id = user_id
         self.book_id = book_id
-        self.loan_date = loan_date
-        self.due_date = due_date
+        self.loan_date = loan_date or date.today()
+        self.due_date = due_date or self.loan_date + timedelta(days=14)
         self.return_date = return_date
 
     def validate(self) -> None:

@@ -332,6 +332,10 @@ class LoanValidator(BaseValidator):
         for field in fields:
             validator = getattr(self, f"validate_{field}", None)
             if callable(validator):
+                # Loan and due dates are only set on creation; an existing loan
+                # being returned will naturally have them in the past
+                if not create and field in ("loan_date", "due_date"):
+                    continue
                 value = getattr(loan, field)
                 try:
                     validator(value)

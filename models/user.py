@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Literal
 from datetime import date
 from mysql.connector import Error
-from auth import hash_password
+from auth import hash_password, is_hashed
 from db import get_connection
 from models.validators import UserValidator
 from models.exceptions import (
@@ -22,14 +22,14 @@ class User:
         email: str,
         password: str,
         id: int | None = None,
-        joined_date: date = date.today(),
+        joined_date: date | None = None,
         role: Literal["member", "admin"] = "member",
     ) -> None:
         self.id = id
         self.name = name
         self.email = email
         self.password = password
-        self.joined_date = joined_date
+        self.joined_date = joined_date or date.today()
         self.role = role
 
     def validate(self) -> None:
@@ -37,7 +37,9 @@ class User:
         validator.validate(self, False if self.id else True)
 
     def prepare_for_save(self):
-        self.password = hash_password(self.password)
+        # Users loaded from the database already hold a hash; don't hash it twice
+        if not is_hashed(self.password):
+            self.password = hash_password(self.password)
 
     def save(self) -> bool:
         try:

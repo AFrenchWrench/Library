@@ -39,7 +39,7 @@ def view_loans(status="all"):
         loans = Loan.get_by_user(current_user.id, status)
         for l in loans:
             print(
-                f"Loan ID: {l.id}, Book Title: {Book.get_by_id(l.book_id).title}, Borrowed on: {l.loan_date}, Returned: {l.return_date if l.return_date else "Not returned yet"}"
+                f"Loan ID: {l.id}, Book Title: {Book.get_by_id(l.book_id).title}, Borrowed on: {l.loan_date}, Returned: {l.return_date if l.return_date else 'Not returned yet'}"
             )
         return True
     except LoanNotFound as e:
@@ -59,13 +59,13 @@ def list_fines():
 
 def borrow_book():
     print("\n--- Borrow Book ---")
-    book_id = int(input("Book ID: "))
     try:
+        book_id = int(input("Book ID: "))
         loan = Loan(user_id=current_user.id, book_id=book_id)
         loan.save()
         print("Book borrowed successfully.")
     except ValidationFailedError as e:
-        if "active loans" in e:
+        if "active loans" in str(e):
             print("You already borrowed 3 books that you have not returned")
             return
         print(e)
@@ -77,9 +77,12 @@ def return_book():
     if not view_loans("active"):
         return
     print("\n--- Return Book ---")
-    loan_id = int(input("Loan ID: "))
     try:
+        loan_id = int(input("Loan ID: "))
         loan = Loan.get_by_id(loan_id=loan_id)
+        if loan.user_id != current_user.id or loan.return_date:
+            print(f"You have no active loan with ID {loan_id}.")
+            return
         loan.return_date = date.today()
         loan.save()
 
@@ -101,7 +104,7 @@ def update_profile():
     print(f"Current Email: {current_user.email}")
 
     name = input("New Name (leave blank to keep current): ").strip()
-    email = input("New Email (leave blank to keep current): ").strip()
+    email = input("New Email (leave blank to keep current): ").strip().lower()
     password = input("New Password (leave blank to keep current): ").strip()
 
     if name:

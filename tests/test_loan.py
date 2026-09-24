@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from models.loan import Loan
 from models.book import Book
 from models.user import User
@@ -333,6 +333,41 @@ def test_returning_book_increases_available_copies():
         Book.delete_by_isbn("RETURNTEST123")
 
 
+def test_return_overdue_loan_from_earlier_date():
+    try:
+        loan = Loan(user_id=seeded_user_id, book_id=seeded_book_id)
+        loan.save()
+
+        today = date.today()
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE loans SET loan_date = %s, due_date = %s WHERE id = %s",
+                    (today - timedelta(days=30), today - timedelta(days=16), loan.id),
+                )
+                conn.commit()
+
+        loan = Loan.get_by_id(loan.id)
+        loan.return_date = today
+        loan.save()
+        fine = loan.check_for_fine()
+
+        # 16 days late minus the 3-day grace period, at 25 per day
+        if fine and fine.amount == 25 * 13:
+            print_result("Return overdue loan from an earlier date", True)
+        else:
+            print_result("Return overdue loan from an earlier date", False)
+    except Exception as e:
+        print_result("Return overdue loan from an earlier date", False)
+        print(e)
+    finally:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM fines WHERE loan_id = %s", (loan.id,))
+                conn.commit()
+        Loan.delete_by_id(loan.id)
+
+
 if __name__ == "__main__":
     print("\nRunning Loan tests...\n")
     seed_required_foreign_keys()
@@ -349,6 +384,7 @@ if __name__ == "__main__":
         test_reject_loan_if_user_has_2_unpaid_fines()
         test_available_copies_decrease_on_loan()
         test_returning_book_increases_available_copies()
+        test_return_overdue_loan_from_earlier_date()
     finally:
         print("\nCleaning up seeded foreign keys...")
         delete_seeded_foreign_keys()

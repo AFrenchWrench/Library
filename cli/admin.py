@@ -19,22 +19,22 @@ current_user = None
 
 def add_book():
     print("\n--- Add Book ---")
-    title = input("Title: ").strip()
-    isbn = input("ISBN: ").strip()
-    author_id = int(input("Author ID: "))
-    publisher_id = int(input("Publisher ID: "))
-    category_id = int(input("Category ID: "))
-    total_copies = int(input("Total Copies: "))
-    book = Book(
-        title=title,
-        isbn=isbn,
-        author_id=author_id,
-        publisher_id=publisher_id,
-        category_id=category_id,
-        total_copies=total_copies,
-        available_copies=total_copies,
-    )
     try:
+        title = input("Title: ").strip()
+        isbn = input("ISBN: ").strip()
+        author_id = int(input("Author ID: "))
+        publisher_id = int(input("Publisher ID: "))
+        category_id = int(input("Category ID: "))
+        total_copies = int(input("Total Copies: "))
+        book = Book(
+            title=title,
+            isbn=isbn,
+            author_id=author_id,
+            publisher_id=publisher_id,
+            category_id=category_id,
+            total_copies=total_copies,
+            available_copies=total_copies,
+        )
         book.save()
         print(f"Book '{title}' added successfully.")
     except ValidationFailedError as e:
@@ -116,7 +116,7 @@ def list_fines():
     for f in fines:
         sleep(0.15)
         print(
-            f"[{f.id}] User ID: {f.user_id}, Loan ID: {f.loan_id}, Amount: {f.amount}, Status: {"Paid" if f.paid else "Not Paid"}"
+            f"[{f.id}] User ID: {f.user_id}, Loan ID: {f.loan_id}, Amount: {f.amount}, Status: {'Paid' if f.paid else 'Not Paid'}"
         )
 
 
@@ -194,7 +194,9 @@ def update_user():
             print("User not found.")
             return
         name = input(f"New Name (current: {user.name}): ").strip() or user.name
-        email = input(f"New Email (current: {user.email}): ").strip() or user.email
+        email = (
+            input(f"New Email (current: {user.email}): ").strip().lower() or user.email
+        )
         if name:
             user.name = name
         if email:
