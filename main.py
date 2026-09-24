@@ -1,17 +1,9 @@
-import sys
+from cli.cli import menu
 
 
 def main():
     print("Welcome to the Library System")
-    print("1. Run CLI")
-    print("2. Run GUI (not implemented)")
-    choice = input("Choose interface: ")
-    if choice == "1":
-        from cli.cli import menu
-
-        menu()
-    else:
-        print("GUI not implemented. Exiting.")
+    menu()
 
 
 if __name__ == "__main__":

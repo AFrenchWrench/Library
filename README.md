@@ -1,146 +1,166 @@
-# 📚 Library Management CLI
+# Library Management CLI
 
-A modular, extensible, and testable command-line interface (CLI) application for managing a library system. Built with Python and SQLite, this project handles book inventory, member registration, loan tracking, and fine calculation — all from the terminal.
+A command-line library management system written in Python and backed by MySQL. Members can browse the catalogue, borrow and return books, and see their loans and fines. A single admin account manages the catalogue, users, and fines.
 
----
+## Features
 
-## ⚙️ Features
+**Accounts**
+- Registration and login, with passwords hashed using bcrypt (via passlib).
+- Two roles: `member` and `admin`. A database trigger ensures only one admin can exist.
+- Members can update their name, email, and password. Changing the password requires the old one.
 
-- 🔍 **Book Management**: Add, update, delete, and query books.
-- 👤 **User Management**: Register, update, and track users.
-- 📆 **Loan System**: Track borrow/return actions and enforce active loan limits.
-- 💸 **Fine Management**: Automatically calculate overdue fines.
-- 🔐 **Authentication**: Secure command-line access for admins.
-- 🧪 **Testing Framework**: Modular test suite for validation, models, and CLI.
-- 🗃️ **Database Scripts**: Easy setup and seeding for dev environments.
+**Admin menu**
+- Add books, authors, publishers, and categories.
+- List books, users, loans, and fines.
+- Update users, books, authors, publishers, and categories.
+- Mark fines as paid or unpaid.
 
----
+**Member menu**
+- List books with their available copies.
+- Borrow a book, view your loans, and return a book.
+- View your fines.
 
-## 🏗️ Project Structure
+**Loan and fine rules**
+- Loans are due 14 days after borrowing.
+- A member can have at most 3 active (unreturned) loans.
+- A member with 2 or more unpaid fines can't borrow.
+- A book with no available copies can't be borrowed. Available copies go down on borrow and back up on return.
+- When a book is returned more than 3 days after its due date, a fine of 25 per day beyond that grace period is issued.
 
-```bash
+**Validation**
+- Each model validates its data before saving: required fields, English (ASCII) text, email format, password strength (at least 8 characters with upper- and lowercase letters, a digit, and a special character), ISBN and name lengths, and that foreign keys point at existing records.
+- Records still referenced by other records (for example, an author with books) can't be deleted. The model raises a descriptive `*InUse` exception instead.
+
+## Tech stack
+
+- Python 3.10+
+- MySQL 8
+- [mysql-connector-python](https://pypi.org/project/mysql-connector-python/) for database access
+- [passlib](https://pypi.org/project/passlib/) with [bcrypt](https://pypi.org/project/bcrypt/) for password hashing
+- [python-dotenv](https://pypi.org/project/python-dotenv/) for configuration
+- [Faker](https://pypi.org/project/Faker/) for generating seed data
+
+## Project structure
+
+```
 Library/
-├── cli/                  # Command-line interface logic
-│   ├── admin.py
-│   ├── cli.py
-│   └── member.py
-│
-├── models/               # Data models, validation, and business logic
+├── cli/
+│   ├── cli.py            # Login / register menu, routes to the admin or member menu
+│   ├── admin.py          # Admin menu
+│   └── member.py         # Member menu
+├── models/
 │   ├── author.py
 │   ├── book.py
 │   ├── category.py
-│   ├── exceptions.py
 │   ├── fine.py
-│   ├── loan.py
+│   ├── loan.py           # Borrow/return logic and fine calculation
+│   ├── publisher.py
 │   ├── user.py
-│   ├── validators.py
-│   └── __init__.py
-│
-├── auth.py               # Authentication mechanism
-├── db.py                 # DB connection handler
-├── main.py               # CLI entry point
-├── seed_database.py      # Populate database with sample data
-├── schema.sql            # SQL schema definition
-├── admin_trigger.sql     # SQL triggers for admin actions
-├── example_env.txt       # Sample env file
-├── database_config.sh    # DB setup script
-├── run_tests.sh          # Test runner
-├── requirements.txt      # Python dependencies
-├── LICENSE               # MIT license
-└── .gitignore            # Ignore rules
-````
+│   ├── validators.py     # Validation rules for every model
+│   └── exceptions.py     # Custom exceptions raised by the models
+├── tests/                # One test script per model
+├── auth.py               # Password hashing and verification
+├── db.py                 # MySQL connection using settings from .env
+├── main.py               # Entry point
+├── schema.sql            # Table definitions
+├── admin_trigger.sql     # Triggers that allow only one admin
+├── database_config.sh    # Drops and recreates the database from the SQL files
+├── seed_database.py      # Fills the database with sample data
+├── run_tests.sh          # Runs every test script
+├── example_env.txt       # Template for .env
+└── requirements.txt
+```
 
----
+## Setup
 
-## 🚀 Getting Started
+You need Python 3.10 or newer and a running MySQL 8 server.
 
-Follow the steps below to get the Library CLI up and running on your local machine.
-
-### 1. Clone the Repository
+### 1. Clone and install dependencies
 
 ```bash
 git clone https://github.com/AFrenchWrench/Library.git
 cd Library
-```
-
-### 2. Set Up a Virtual Environment
-
-Create and activate a virtual environment:
-
-```bash
 python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
-
-### 3. Install Dependencies
-
-Install the required packages:
-
-```bash
+source .venv/bin/activate        # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4. Configure the Environment
+### 2. Create the database
 
-Copy the example environment file and update values as needed:
+```bash
+bash database_config.sh
+```
+
+This **drops** any existing `library` database, then recreates it from `schema.sql` and `admin_trigger.sql`. It connects with `sudo mysql -u root`, which works with the default root setup on Debian and Ubuntu. If your MySQL root account uses a password instead, run the same steps by hand:
+
+```bash
+mysql -u root -p -e "DROP DATABASE IF EXISTS library; CREATE DATABASE library;"
+mysql -u root -p library < schema.sql
+mysql -u root -p library < admin_trigger.sql
+```
+
+### 3. Create a MySQL user for the application
+
+```sql
+CREATE USER 'library_app'@'localhost' IDENTIFIED BY 'choose-a-password';
+GRANT ALL PRIVILEGES ON library.* TO 'library_app'@'localhost';
+```
+
+### 4. Configure the environment
 
 ```bash
 cp example_env.txt .env
 ```
 
-> ⚠️ Make sure the `.env` file points to your SQLite database path or other environment-specific configs.
+Then edit `.env`:
 
-### 5. Initialize the Database
+| Variable  | Description                           |
+|-----------|---------------------------------------|
+| `DB_HOST` | MySQL host, e.g. `localhost`          |
+| `DB_USER` | MySQL user created in step 3          |
+| `DB_PASS` | That user's password                  |
+| `DB_NAME` | Database name (`library`)             |
 
-Run the following scripts to create and seed the database:
+The connection uses MySQL's default port (3306).
+
+### 5. Seed sample data (optional)
 
 ```bash
-bash database_config.sh
 python seed_database.py
 ```
 
-### 6. Start the Application
+This adds 100 each of authors, publishers, categories, members, books, and loans. Some of the returned loans come back late, so a handful of fines are generated too. It takes about a minute. Seeded members get random passwords, so to log in you need to register your own accounts (see below).
 
-Launch the CLI:
+## Usage
 
 ```bash
 python main.py
 ```
 
-Use the prompts to:
+From the start menu you can log in or register. Registration asks for a role. The first account registered as `admin` becomes the library's admin, and any further admin registration is rejected. Log in as the admin to manage the catalogue, or register a member account to borrow books.
 
-* Log in as an admin or member
-* Manage books and members
-* Track loans and fines
-* Borrow a book
-* See available books
-
----
-
-## 🧪 Running Tests
-
-To run the test suite:
+## Running tests
 
 ```bash
 bash run_tests.sh
 ```
 
-This executes unit and integration tests for your CLI and models.
+Each file in `tests/` is a plain script that prints ✅ or ❌ for each check. `run_tests.sh` runs them all and exits with a non-zero status if any check fails. To run a single file:
 
----
+```bash
+python -m tests.test_loan
+```
 
-## 📜 License
+The tests use the database configured in `.env`. They create their own records and delete them afterwards. They also expect no admin account to exist yet, because one test creates the admin. Run them on a freshly created database, before registering an admin:
 
-MIT License. See [`LICENSE`](LICENSE) for full details.
+```bash
+bash database_config.sh && bash run_tests.sh
+```
 
----
+## License
 
-## 🤝 Contributing
+MIT. See [LICENSE](LICENSE).
 
-Pull requests and issues are welcome. Please follow the established structure and include test coverage for new features.
+## Author
 
----
-
-## ✍️ Author
-
-Made with ⚙️ by [AFrenchWrench](https://github.com/AFrenchWrench)
+[AFrenchWrench](https://github.com/AFrenchWrench)
