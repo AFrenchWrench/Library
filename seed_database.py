@@ -18,7 +18,7 @@ random.seed(0)
 def clean_name(text, min_len=5, max_len=15):
     text = "".join(filter(str.isalnum, text))
     if len(text) < min_len:
-        return clean_name(fake.word(), min_len, max_len)
+        return clean_name(fake.unique.word(), min_len, max_len)
     return text[:max_len]
 
 
